@@ -1,0 +1,702 @@
+{# views/manual/index.twig - Módulo 14: Manual de Usuario #}
+{% extends 'layouts/main.twig' %}
+
+{% block title %}Manual de Usuario - TallerSmart{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="manualApp()">
+    <!-- Header del Manual -->
+    <div class="bg-white border-b shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Manual de Usuario</h1>
+                    <p class="mt-2 text-gray-600">Guía completa para utilizar TallerSmart</p>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="imprimirManual()" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        Imprimir
+                    </button>
+                    <button @click="descargarPDF()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Descargar PDF
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Buscador -->
+            <div class="mt-6 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    x-model="busqueda"
+                    @input="filtrarContenido()"
+                    placeholder="Buscar en el manual (ej: RUT, citas, inventario)..."
+                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Sidebar de Navegación -->
+            <div class="lg:col-span-1">
+                <nav class="sticky top-4 space-y-1">
+                    <template x-for="(seccion, index) in secciones" :key="index">
+                        <a 
+                            :href="'#seccion-' + index"
+                            @click.prevent="irASeccion(index)"
+                            class="group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors"
+                            :class="seccionActiva === index ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'"
+                        >
+                            <span class="truncate" x-text="seccion.titulo"></span>
+                            <span x-show="seccion.nuevo" class="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">Nuevo</span>
+                        </a>
+                    </template>
+                    
+                    <div class="pt-4 mt-4 border-t border-gray-200">
+                        <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Recursos</h3>
+                        <a href="#" class="mt-2 group flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
+                            <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Glosario de Términos
+                        </a>
+                        <a href="#" class="group flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
+                            <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Soporte Técnico
+                        </a>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Contenido Principal -->
+            <div class="lg:col-span-3">
+                <div class="bg-white shadow rounded-lg divide-y divide-gray-200">
+                    <template x-for="(seccion, index) in seccionesFiltradas" :key="index">
+                        <div :id="'seccion-' + index" class="p-6 scroll-mt-24">
+                            <div class="flex items-start justify-between">
+                                <h2 class="text-2xl font-bold text-gray-900" x-text="seccion.titulo"></h2>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="'Capítulo ' + (index + 1)"></span>
+                            </div>
+                            
+                            <div class="mt-4 prose prose-blue max-w-none" x-html="seccion.contenido"></div>
+                            
+                            <!-- Pasos Detallados -->
+                            <template x-if="seccion.pasos && seccion.pasos.length > 0">
+                                <div class="mt-6 bg-gray-50 rounded-lg p-6">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Pasos a Seguir</h3>
+                                    <ol class="space-y-4">
+                                        <template x-for="(paso, idx) in seccion.pasos" :key="idx">
+                                            <li class="flex">
+                                                <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold" x-text="idx + 1"></span>
+                                                <div class="ml-4">
+                                                    <h4 class="text-sm font-medium text-gray-900" x-text="paso.titulo"></h4>
+                                                    <p class="mt-1 text-sm text-gray-600" x-text="paso.descripcion"></p>
+                                                    <template x-if="paso.nota">
+                                                        <div class="mt-2 flex items-start">
+                                                            <svg class="w-5 h-5 text-yellow-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            <p class="text-sm text-yellow-700" x-text="paso.nota"></p>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </li>
+                                        </template>
+                                    </ol>
+                                </div>
+                            </template>
+                            
+                            <!-- Ejemplos Prácticos -->
+                            <template x-if="seccion.ejemplos && seccion.ejemplos.length > 0">
+                                <div class="mt-6 border-l-4 border-green-500 bg-green-50 p-4">
+                                    <h3 class="text-lg font-semibold text-green-900 mb-3">Ejemplos Prácticos</h3>
+                                    <ul class="space-y-3">
+                                        <template x-for="(ejemplo, idx) in seccion.ejemplos" :key="idx">
+                                            <li class="text-sm text-green-800">
+                                                <span class="font-semibold">• </span>
+                                                <span x-text="ejemplo"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    
+                    <!-- Sin Resultados -->
+                    <div x-show="seccionesFiltradas.length === 0" class="p-12 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No se encontraron resultados</h3>
+                        <p class="mt-1 text-sm text-gray-500">Intenta con otros términos de búsqueda.</p>
+                    </div>
+                </div>
+                
+                <!-- Navegación entre Capítulos -->
+                <div class="mt-8 flex justify-between">
+                    <button 
+                        x-show="seccionActiva > 0"
+                        @click="irASeccion(seccionActiva - 1)"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Anterior
+                    </button>
+                    <button 
+                        x-show="seccionActiva < secciones.length - 1"
+                        @click="irASeccion(seccionActiva + 1)"
+                        class="ml-auto inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                        Siguiente
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('manualApp', () => ({
+        busqueda: '',
+        seccionActiva: 0,
+        secciones: [
+            {
+                titulo: 'Introducción a TallerSmart',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        <strong>TallerSmart</strong> es un sistema integral de gestión diseñado específicamente para talleres mecánicos en Chile. 
+                        Esta plataforma le permitirá administrar todas las operaciones de su negocio de manera eficiente, desde la recepción de vehículos 
+                        hasta la entrega final y cobro de servicios.
+                    </p>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-blue-900">🎯 Gestión Completa</h4>
+                            <p class="text-sm text-blue-700 mt-1">Administre citas, órdenes, inventario y pagos en un solo lugar.</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-green-900">🇨🇱 Adaptado a Chile</h4>
+                            <p class="text-sm text-green-700 mt-1">RUT, patentes chilenas, moneda CLP y normativa tributaria local.</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-purple-900">📊 Reportes en Tiempo Real</h4>
+                            <p class="text-sm text-purple-700 mt-1">Dashboard ejecutivo con indicadores clave de su negocio.</p>
+                        </div>
+                    </div>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Acceso al Sistema',
+                        descripcion: 'Ingrese con sus credenciales proporcionadas por el administrador.',
+                        nota: 'Su contraseña debe tener al menos 8 caracteres, incluir mayúsculas, números y símbolos.'
+                    },
+                    {
+                        titulo: 'Configuración Inicial',
+                        descripcion: 'Complete su perfil de usuario y configure sus preferencias de notificación.'
+                    },
+                    {
+                        titulo: 'Exploración de Módulos',
+                        descripcion: 'Utilice el menú lateral para navegar entre las diferentes secciones del sistema.'
+                    }
+                ],
+                ejemplos: [
+                    'Usuario: admin@tallersmart.cl / Contraseña: Admin123!',
+                    'El sistema cerrará sesión automáticamente después de 30 minutos de inactividad.',
+                    'Puede cambiar su contraseña en cualquier momento desde el menú de usuario.'
+                ]
+            },
+            {
+                titulo: 'Gestión de Roles y Permisos (RBAC)',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        El módulo de RBAC (<em>Role-Based Access Control</em>) permite administrar quién puede acceder a qué funcionalidades del sistema.
+                        Cada usuario tiene asignado un rol, y cada rol tiene permisos específicos.
+                    </p>
+                    <h4 class="font-semibold text-gray-900 mt-4">Roles Disponibles:</h4>
+                    <ul class="mt-2 space-y-2">
+                        <li class="flex items-start">
+                            <span class="text-red-500 mr-2">🔴</span>
+                            <div><strong>Super Administrador:</strong> Acceso total a todas las funciones del sistema.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-orange-500 mr-2">🟠</span>
+                            <div><strong>Administrador:</strong> Gestión completa excepto configuración del sistema.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-blue-500 mr-2">🔵</span>
+                            <div><strong>Jefe de Taller:</strong> Supervisión de órdenes, técnicos y citas.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">🟢</span>
+                            <div><strong>Recepcionista:</strong> Creación de citas, clientes y órdenes iniciales.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-purple-500 mr-2">🟣</span>
+                            <div><strong>Técnico:</strong> Visualización y actualización de órdenes asignadas.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-yellow-500 mr-2">🟡</span>
+                            <div><strong>Bodeguero:</strong> Gestión de inventario y movimientos de stock.</div>
+                        </li>
+                    </ul>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Crear Nuevo Rol',
+                        descripcion: 'Navegue a la pestaña "Roles", haga clic en "Nuevo Rol", asigne nombre y descripción.'
+                    },
+                    {
+                        titulo: 'Asignar Permisos',
+                        descripcion: 'Seleccione los permisos que tendrá este rol marcando las casillas correspondientes por módulo.'
+                    },
+                    {
+                        titulo: 'Asignar Rol a Usuario',
+                        descripcion: 'En la pestaña "Usuarios", edite el usuario y seleccione el rol desde el dropdown.'
+                    }
+                ],
+                ejemplos: [
+                    'Un Recepcionista puede crear citas pero no eliminar registros históricos.',
+                    'Un Técnico solo ve las órdenes que le han sido asignadas.',
+                    'El rol Auditor tiene acceso de solo lectura a todos los módulos y logs.'
+                ]
+            },
+            {
+                titulo: 'Registro de Clientes con RUT Chileno',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        El sistema valida automáticamente el <strong>RUT chileno</strong> con su dígito verificador, asegurando que todos los clientes 
+                        estén registrados correctamente según la normativa tributaria de Chile.
+                    </p>
+                    <div class="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    <strong>Formato válido:</strong> 11.111.111-1 o 111111111 (el sistema formatea automáticamente).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Ingresar RUT',
+                        descripcion: 'Digite el RUT sin puntos ni guión. El sistema validará el dígito verificador automáticamente.',
+                        nota: 'Si el RUT es inválido, el sistema mostrará un error antes de guardar.'
+                    },
+                    {
+                        titulo: 'Completar Datos Personales',
+                        descripcion: 'Ingrese nombre, apellido, email y teléfono (formato +56 9 XXXX XXXX).'
+                    },
+                    {
+                        titulo: 'Agregar Dirección',
+                        descripcion: 'Registre la dirección completa incluyendo comuna y región.'
+                    },
+                    {
+                        titulo: 'Guardar Cliente',
+                        descripcion: 'Haga clic en "Guardar". El cliente quedará disponible para asociar a vehículos y órdenes.'
+                    }
+                ],
+                ejemplos: [
+                    'RUT: 12345678 → El sistema calcula y agrega el dígito verificador automáticamente.',
+                    'Teléfono: 912345678 → Se muestra como +56 9 1234 5678.',
+                    'Email corporativo: contacto@empresa.cl es válido para clientes empresariales.'
+                ]
+            },
+            {
+                titulo: 'Gestión de Vehículos y Patentes Chilenas',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Registre los vehículos de sus clientes validando automáticamente el formato de <strong>patente chilena</strong>.
+                        El sistema soporta ambos formatos vigentes en Chile:
+                    </p>
+                    <ul class="mt-3 space-y-2">
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                            <strong>Formato Antiguo:</strong> LLNNNN (ej: AA·BB·12)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                            <strong>Formato Nuevo:</strong> LLLLNN (ej: ABCD·12)
+                        </li>
+                    </ul>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Seleccionar Cliente',
+                        descripcion: 'Busque y seleccione el cliente propietario del vehículo.'
+                    },
+                    {
+                        titulo: 'Ingresar Patente',
+                        descripcion: 'Digite la patente. El sistema validará el formato chileno automáticamente.',
+                        nota: 'No ingrese puntos ni guiones, solo letras y números.'
+                    },
+                    {
+                        titulo: 'Datos del Vehículo',
+                        descripcion: 'Complete marca, modelo, año, color, VIN y kilometraje actual.'
+                    },
+                    {
+                        titulo: 'Fotografías (Opcional)',
+                        descripcion: 'Suba fotos del vehículo para registro de estado inicial.'
+                    }
+                ],
+                ejemplos: [
+                    'Patente válida: ABCD12 (formato nuevo) o AB1234 (formato antiguo).',
+                    'VIN: 1HGBH41JXMN109186 (17 caracteres alfanuméricos).',
+                    'El sistema alerta si ya existe un vehículo con la misma patente.'
+                ]
+            },
+            {
+                titulo: 'Agendamiento de Citas',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        La agenda inteligente le permite programar citas considerando la disponibilidad de técnicos y boxes.
+                        Visualice las citas en calendario semanal o lista.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Nueva Cita',
+                        descripcion: 'Haga clic en "Nueva Cita" en el calendario o lista.'
+                    },
+                    {
+                        titulo: 'Seleccionar Fecha y Hora',
+                        descripcion: 'Elija el día y bloque horario disponible. Los ocupados se muestran en gris.'
+                    },
+                    {
+                        titulo: 'Asociar Cliente y Vehículo',
+                        descripcion: 'Busque el cliente y seleccione el vehículo a atender.'
+                    },
+                    {
+                        titulo: 'Agregar Servicios',
+                        descripcion: 'Seleccione uno o más servicios de la lista predefinida.'
+                    },
+                    {
+                        titulo: 'Asignar Técnico',
+                        descripcion: 'Designe el técnico responsable (opcional al crear, obligatorio antes de iniciar).'
+                    },
+                    {
+                        titulo: 'Confirmar y Notificar',
+                        descripcion: 'Guarde la cita. El sistema enviará confirmación automática al cliente.'
+                    }
+                ],
+                ejemplos: [
+                    'Las citas tienen duración estimada según la suma de los servicios seleccionados.',
+                    'Puede reagendar arrastrando la cita en el calendario.',
+                    'Cancelar cita requiere ingresar motivo (se registra en auditoría).'
+                ]
+            },
+            {
+                titulo: 'Órdenes de Servicio - Flujo Completo',
+                nuevo: true,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Las órdenes de servicio son el corazón del taller. Gestionan todo el proceso desde la recepción hasta la entrega del vehículo.
+                    </p>
+                    <div class="mt-4 flex items-center justify-center space-x-2">
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Pendiente</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">En Progreso</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">En Espera</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Finalizado</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Entregado</span>
+                    </div>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Crear Orden desde Cita',
+                        descripcion: 'Seleccione la cita y haga clic en "Generar Orden". Los datos se copian automáticamente.'
+                    },
+                    {
+                        titulo: 'Diagnóstico Inicial',
+                        descripcion: 'El técnico registra hallazgos adicionales y sugiere reparaciones extra.'
+                    },
+                    {
+                        titulo: 'Agregar Repuestos',
+                        descripcion: 'Desde el inventario, agregue repuestos necesarios. El stock se reserva automáticamente.'
+                    },
+                    {
+                        titulo: 'Actualizar Estado',
+                        descripcion: 'Cambie el estado según avance el trabajo. El cliente recibe notificaciones.'
+                    },
+                    {
+                        titulo: 'Control de Calidad',
+                        descripcion: 'Antes de finalizar, el jefe de taller revisa y aprueba el trabajo.'
+                    },
+                    {
+                        titulo: 'Generar Cobro',
+                        descripcion: 'Al finalizar, el sistema calcula total (mano de obra + repuestos + IVA). Deriva a módulo de Pagos.'
+                    }
+                ],
+                ejemplos: [
+                    'Una orden puede estar "En Espera Repuesto" mientras llega el insumo.',
+                    'El cliente puede aprobar presupuestos adicionales desde su portal.',
+                    'La bitácora registra cada cambio de estado con fecha, hora y usuario.'
+                ]
+            },
+            {
+                titulo: 'Gestión de Inventario',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Controle el stock de repuestos y materiales con alertas automáticas de reposición.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Registrar Producto',
+                        descripcion: 'Ingrese código, nombre, categoría, costo, precio de venta y stock mínimo.'
+                    },
+                    {
+                        titulo: 'Movimientos de Stock',
+                        descripcion: 'Cada uso en una orden genera salida automática. Las compras generan entrada.'
+                    },
+                    {
+                        titulo: 'Alertas de Stock Bajo',
+                        descripcion: 'El sistema notifica cuando un producto alcanza el stock mínimo.'
+                    },
+                    {
+                        titulo: 'Inventario Físico',
+                        descripcion: 'Realice conteos periódicos y ajuste diferencias.'
+                    }
+                ],
+                ejemplos: [
+                    'Stock mínimo: 5 unidades. Cuando queden 5, el sistema alerta para reordenar.',
+                    'Los repuestos usados en órdenes se descuentan automáticamente.',
+                    'Puede generar órdenes de compra desde la alerta de stock bajo.'
+                ]
+            },
+            {
+                titulo: 'Pagos y Facturación',
+                nuevo: true,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Module de pagos adaptado a la tributación chilena, con emisión de boletas y facturas electrónicas.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Seleccionar Orden',
+                        descripcion: 'Busque la orden finalizada pendiente de pago.'
+                    },
+                    {
+                        titulo: 'Verificar Monto',
+                        descripcion: 'Revise subtotal, IVA (19%) y total. Aplique descuentos si corresponde.'
+                    },
+                    {
+                        titulo: 'Seleccionar Método de Pago',
+                        descripcion: 'Efectivo, transferencia, tarjeta de débito/crédito, cheque.'
+                    },
+                    {
+                        titulo: 'Tipo de Documento',
+                        descripcion: 'Seleccione Boleta (consumidor final) o Factura (empresa con RUT).'
+                    },
+                    {
+                        titulo: 'Procesar Pago',
+                        descripcion: 'Confirme el pago. El sistema registra la transacción y actualiza el estado de la orden.'
+                    },
+                    {
+                        titulo: 'Entregar Comprobante',
+                        descripcion: 'Imprima o envíe por email el comprobante electrónico.'
+                    }
+                ],
+                ejemplos: [
+                    'Pago parcial: Un cliente puede pagar el 50% como abono y el resto después.',
+                    'Factura electrónica: Requiere RUT de empresa válido y email.',
+                    'Cierre de caja: Al final del día, genere el arqueo de caja.'
+                ]
+            },
+            {
+                titulo: 'Dashboard Ejecutivo',
+                nuevo: true,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Panel de control con indicadores clave para la toma de decisiones.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Seleccionar Período',
+                        descripcion: 'Filtre por hoy, esta semana, este mes o rango personalizado.'
+                    },
+                    {
+                        titulo: 'Revisar KPIs',
+                        descripcion: 'Órdenes completadas, ingresos totales, ticket promedio, satisfacción.'
+                    },
+                    {
+                        titulo: 'Analizar Gráficos',
+                        descripcion: 'Tendencias de ingresos, servicios más solicitados, productividad por técnico.'
+                    },
+                    {
+                        titulo: 'Exportar Reporte',
+                        descripcion: 'Descargue el informe en PDF o Excel para reuniones.'
+                    }
+                ],
+                ejemplos: [
+                    'KPI: Ticket promedio = Ingresos totales / Órdenes completadas.',
+                    'Gráfico de barras: Comparativa mensual de ingresos.',
+                    'Top 5 técnicos por órdenes completadas.'
+                ]
+            },
+            {
+                titulo: 'Auditoría y Trazabilidad',
+                nuevo: true,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Registro inmutable de todas las acciones críticas del sistema para cumplimiento normativo.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Acceder a AuditLog',
+                        descripcion: 'Solo roles Administrador y Auditor pueden ver este módulo.'
+                    },
+                    {
+                        titulo: 'Filtrar Registros',
+                        descripcion: 'Por usuario, entidad afectada, tipo de acción o fecha.'
+                    },
+                    {
+                        titulo: 'Ver Detalles',
+                        descripcion: 'Expanda un registro para ver el diff de cambios (antes/después).'
+                    },
+                    {
+                        titulo: 'Exportar Evidencia',
+                        descripcion: 'Genere reporte PDF para auditorías externas.'
+                    }
+                ],
+                ejemplos: [
+                    'Cada login/logout queda registrado con IP y user-agent.',
+                    'Cambios en precios de servicios muestran valor anterior y nuevo.',
+                    'Eliminaciones son lógicas: el registro persiste marcado como eliminado.'
+                ]
+            },
+            {
+                titulo: 'Centro de Notificaciones',
+                nuevo: true,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Manténgase informado de eventos importantes en tiempo real.
+                    </p>
+                `,
+                pasos: [
+                    {
+                        titulo: 'Revisar Bandeja',
+                        descripcion: 'Las notificaciones no leídas aparecen en rojo con badge en el header.'
+                    },
+                    {
+                        titulo: 'Filtrar por Tipo',
+                        descripcion: 'Citas, Órdenes, Inventario, Pagos, Sistema.'
+                    },
+                    {
+                        titulo: 'Marcar como Leída',
+                        descripcion: 'Individualmente o "Marcar todas como leídas".'
+                    },
+                    {
+                        titulo: 'Configurar Preferencias',
+                        descripcion: 'Decida qué notificaciones recibir por email, push o solo en plataforma.'
+                    }
+                ],
+                ejemplos: [
+                    'Notificación: "Cita #123 confirmada para mañana 10:00 hrs".',
+                    'Alerta: "Stock bajo: Aceite 5W30 (quedan 3 unidades)".',
+                    'Recordatorio: "Orden #456 lista para entrega".'
+                ]
+            },
+            {
+                titulo: 'Soporte y Contacto',
+                nuevo: false,
+                contenido: `
+                    <p class="text-gray-600 leading-relaxed">
+                        Si necesita ayuda, nuestro equipo de soporte está disponible.
+                    </p>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-blue-900">📧 Email</h4>
+                            <p class="text-sm text-blue-700 mt-1">soporte@tallersmart.cl</p>
+                            <p class="text-xs text-blue-600 mt-1">Respuesta en 24 horas hábiles</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-green-900">📞 Teléfono</h4>
+                            <p class="text-sm text-green-700 mt-1">+56 2 2345 6789</p>
+                            <p class="text-xs text-green-600 mt-1">Lunes a Viernes, 9:00 - 18:00</p>
+                        </div>
+                    </div>
+                `,
+                ejemplos: [
+                    'Para reportar un bug, incluya captura de pantalla y pasos para reproducir.',
+                    'Solicitudes de nuevas funcionalidades son evaluadas mensualmente.',
+                    'Capacitaciones personalizadas disponibles con costo adicional.'
+                ]
+            }
+        ],
+        
+        get seccionesFiltradas() {
+            if (!this.busqueda.trim()) {
+                return this.secciones;
+            }
+            const termino = this.busqueda.toLowerCase();
+            return this.secciones.filter(seccion => 
+                seccion.titulo.toLowerCase().includes(termino) ||
+                seccion.contenido.toLowerCase().includes(termino) ||
+                (seccion.pasos && seccion.pasos.some(p => p.titulo.toLowerCase().includes(termino) || p.descripcion.toLowerCase().includes(termino)))
+            );
+        },
+        
+        filtrarContenido() {
+            // Resetear scroll al primer resultado
+            if (this.seccionesFiltradas.length > 0) {
+                this.irASeccion(0);
+            }
+        },
+        
+        irASeccion(index) {
+            this.seccionActiva = index;
+            const elemento = document.getElementById('seccion-' + index);
+            if (elemento) {
+                elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        },
+        
+        imprimirManual() {
+            window.print();
+        },
+        
+        descargarPDF() {
+            alert('Funcionalidad de exportación a PDF en desarrollo. Pronto disponible.');
+        }
+    }));
+});
+</script>
+{% endblock %}
