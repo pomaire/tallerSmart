@@ -1,3 +1,231 @@
 {% extends "@app/views/layouts/main.twig" %}
-{% block title %}Vehiculo - TallerSmart{% endblock %}
-{% block content %}<div class="p-6"><h1 class="text-2xl font-bold">Vehiculo</h1><p>Vista en desarrollo</p></div>{% endblock %}
+
+{% block title %}Vehículos - TallerSmart{% endblock %}
+
+{% block content %}
+<div class="p-6" x-data="vehiculoModule()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Vehículos</h1>
+            <p class="text-gray-600 text-sm mt-1">Gestión de vehículos y patentes chilenas</p>
+        </div>
+        <button @click="abrirModalCrear()" 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <i class="fas fa-plus"></i>
+            <span>Nuevo Vehículo</span>
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                <input type="text" x-model="filtroBusqueda" placeholder="Patente, VIN o modelo..."
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <select x-model="filtroCliente" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="">Todos</option>
+                    <template x-for="cliente in clientes" :key="cliente.id">
+                        <option :value="cliente.id" x-text="cliente.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button @click="aplicarFiltros()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg">
+                    <i class="fas fa-filter mr-2"></i>Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VIN</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca/Modelo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Año</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <template x-for="vehiculo in vehiculosFiltrados" :key="vehiculo.id">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <span class="font-mono font-bold text-blue-600" x-text="vehiculo.patente"></span>
+                        </td>
+                        <td class="px-6 py-4 font-mono text-sm" x-text="vehiculo.vin"></td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium" x-text="vehiculo.marca + ' ' + vehiculo.modelo"></div>
+                            <div class="text-xs text-gray-500" x-text="vehiculo.version"></div>
+                        </td>
+                        <td class="px-6 py-4 text-sm" x-text="vehiculo.anio"></td>
+                        <td class="px-6 py-4">
+                            <span class="text-sm text-gray-900" x-text="vehiculo.cliente_nombre"></span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button @click="editarVehiculo(vehiculo)" class="text-yellow-600 hover:text-yellow-900 mr-3">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button @click="eliminarVehiculo(vehiculo)" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div x-show="modalAbierto" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="cerrarModal()"></div>
+            <div class="bg-white rounded-lg p-6 max-w-2xl w-full relative z-10">
+                <h3 class="text-xl font-bold mb-4" x-text="modoEdicion ? 'Editar Vehículo' : 'Nuevo Vehículo'"></h3>
+                <form @submit.prevent="guardarVehiculo()" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Patente <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formulario.patente" @blur="validarPatente()"
+                                   placeholder="ABCD12 o AB12-34"
+                                   class="w-full px-4 py-2 border rounded-lg uppercase"
+                                   :class="errores.patente ? 'border-red-500' : 'border-gray-300'" required>
+                            <p x-show="errores.patente" class="text-red-500 text-xs mt-1" x-text="errores.patente"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">VIN</label>
+                            <input type="text" x-model="formulario.vin" class="w-full px-4 py-2 border border-gray-300 rounded-lg uppercase">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Marca <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formulario.marca" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Modelo <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formulario.modelo" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                            <input type="number" x-model="formulario.anio" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente <span class="text-red-500">*</span></label>
+                        <select x-model="formulario.cliente_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <option value="">Seleccionar cliente</option>
+                            <template x-for="cliente in clientes" :key="cliente.id">
+                                <option :value="cliente.id" x-text="cliente.nombre + ' ' + cliente.apellido"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" @click="cerrarModal()" class="px-4 py-2 border rounded-lg">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function vehiculoModule() {
+    return {
+        vehiculos: [],
+        vehiculosFiltrados: [],
+        clientes: [],
+        filtroBusqueda: '',
+        filtroCliente: '',
+        modalAbierto: false,
+        modoEdicion: false,
+        formulario: { id: null, patente: '', vin: '', marca: '', modelo: '', version: '', anio: null, cliente_id: '' },
+        errores: {},
+
+        init() {
+            this.clientes = [
+                { id: 1, nombre: 'Carlos', apellido: 'Pomaire' },
+                { id: 2, nombre: 'María', apellido: 'González' },
+                { id: 3, nombre: 'Roberto', apellido: 'Sánchez' }
+            ];
+            this.vehiculos = [
+                { id: 1, patente: 'ABCD12', vin: '1HGBH41JXMN109186', marca: 'Toyota', modelo: 'Corolla', version: 'XLI', anio: 2020, cliente_id: 1, cliente_nombre: 'Carlos Pomaire' },
+                { id: 2, patente: 'ZZ9988', vin: '2HGBH41JXMN109187', marca: 'Mazda', modelo: '3', version: 'Sport', anio: 2021, cliente_id: 2, cliente_nombre: 'María González' },
+                { id: 3, patente: 'BBLL34', vin: '3HGBH41JXMN109188', marca: 'Chevrolet', modelo: 'Sail', version: 'Sedan', anio: 2019, cliente_id: 1, cliente_nombre: 'Carlos Pomaire' }
+            ];
+            this.aplicarFiltros();
+        },
+
+        aplicarFiltros() {
+            this.vehiculosFiltrados = this.vehiculos.filter(v => {
+                const coincideBusqueda = !this.filtroBusqueda || v.patente.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) || v.marca.toLowerCase().includes(this.filtroBusqueda.toLowerCase());
+                const coincideCliente = !this.filtroCliente || v.cliente_id == this.filtroCliente;
+                return coincideBusqueda && coincideCliente;
+            });
+        },
+
+        abrirModalCrear() {
+            this.modoEdicion = false;
+            this.formulario = { id: null, patente: '', vin: '', marca: '', modelo: '', version: '', anio: null, cliente_id: '' };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+
+        editarVehiculo(vehiculo) {
+            this.modoEdicion = true;
+            this.formulario = { ...vehiculo };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.errores = {};
+        },
+
+        validarPatente() {
+            const patente = this.formulario.patente.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            // Formato chileno: LLLLNN (nuevo) o LLNNNN (antiguo)
+            const formatoNuevo = /^[A-Z]{4}\d{2}$/.test(patente);
+            const formatoAntiguo = /^[A-Z]{2}\d{4}$/.test(patente);
+            if (!formatoNuevo && !formatoAntiguo) {
+                this.errores.patente = 'Formato inválido. Use LLLLNN (ej: ABCD12) o LLNNNN (ej: AB1234)';
+                return false;
+            }
+            this.errores.patente = '';
+            return true;
+        },
+
+        guardarVehiculo() {
+            if (!this.validarPatente()) return;
+            if (this.modoEdicion) {
+                const index = this.vehiculos.findIndex(v => v.id === this.formulario.id);
+                if (index !== -1) this.vehiculos[index] = { ...this.formulario };
+            } else {
+                const nuevoId = Math.max(...this.vehiculos.map(v => v.id), 0) + 1;
+                const cliente = this.clientes.find(c => c.id == this.formulario.cliente_id);
+                this.vehiculos.push({ ...this.formulario, id: nuevoId, cliente_nombre: cliente ? `${cliente.nombre} ${cliente.apellido}` : '' });
+            }
+            this.aplicarFiltros();
+            this.cerrarModal();
+        },
+
+        eliminarVehiculo(vehiculo) {
+            if (confirm(`¿Eliminar vehículo ${vehiculo.patente}?`)) {
+                this.vehiculos = this.vehiculos.filter(v => v.id !== vehiculo.id);
+                this.aplicarFiltros();
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
