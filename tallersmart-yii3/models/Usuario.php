@@ -105,4 +105,34 @@ final class Usuario extends ActiveRecord
         }
         return new \DateTime($this->bloqueadoHasta) > new \DateTime();
     }
+    
+    /**
+     * Incrementa los intentos fallidos de login
+     */
+    public function incrementFailedAttempts(): void
+    {
+        $this->intentosFallidos++;
+        $this->save(false);
+    }
+    
+    /**
+     * Resetea los intentos fallidos a cero
+     */
+    public function resetFailedAttempts(): void
+    {
+        $this->intentosFallidos = 0;
+        $this->bloqueadoHasta = null;
+        $this->save(false);
+    }
+    
+    /**
+     * Bloquea la cuenta por 15 minutos
+     */
+    public function blockAccount(): void
+    {
+        $bloqueadoHasta = new \DateTime();
+        $bloqueadoHasta->modify('+15 minutes');
+        $this->bloqueadoHasta = $bloqueadoHasta->format('Y-m-d H:i:s');
+        $this->save(false);
+    }
 }
