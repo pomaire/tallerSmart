@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace app\models;
 
 use yii\db\ActiveRecord;
+use yii\db\Expression;
 
 /**
- * Modelo para la tabla OrdenServicio
+ * Modelo para la tabla orden_servicio
  */
 class OrdenServicio extends ActiveRecord
 {
@@ -20,12 +21,13 @@ class OrdenServicio extends ActiveRecord
     {
         return [
             [['cliente_id', 'vehiculo_id'], 'required'],
-            [['cita_id', 'cliente_id', 'vehiculo_id', 'created_by', 'finalizada_por', 'kilometraje'], 'integer'],
-            [['numero_orden'], 'string', 'max' => 50],
+            [['cita_id', 'cliente_id', 'vehiculo_id', 'tecnico_id', 'created_by', 'finalizada_por', 'kilometraje'], 'integer'],
+            [['numero_orden', 'folio'], 'string', 'max' => 50],
             [['estado'], 'string', 'max' => 50],
-            [['descripcion_problema', 'diagnostico', 'notas_internas'], 'string'],
-            [['total'], 'number'],
-            [['fecha_hora', 'finalizada_en', 'created_at', 'updated_at'], 'safe'],
+            [['prioridad'], 'in', 'range' => ['baja', 'media', 'alta', 'urgente']],
+            [['descripcion_problema', 'diagnostico', 'notas_internas', 'notas_tecnico'], 'string'],
+            [['total', 'subtotal', 'descuento'], 'number'],
+            [['fecha_hora', 'fecha_entrega_estimada', 'fecha_entrega_real', 'finalizada_en', 'created_at', 'updated_at'], 'safe'],
         ];
     }
 
@@ -36,13 +38,19 @@ class OrdenServicio extends ActiveRecord
             'cita_id' => 'Cita',
             'cliente_id' => 'Cliente',
             'vehiculo_id' => 'Vehículo',
+            'tecnico_id' => 'Técnico',
             'numero_orden' => 'Número de Orden',
+            'folio' => 'Folio',
             'estado' => 'Estado',
+            'prioridad' => 'Prioridad',
             'descripcion_problema' => 'Descripción del Problema',
             'diagnostico' => 'Diagnóstico',
             'notas_internas' => 'Notas Internas',
+            'notas_tecnico' => 'Notas del Técnico',
             'kilometraje' => 'Kilometraje',
             'total' => 'Total',
+            'fecha_entrega_estimada' => 'Fecha Entrega Estimada',
+            'fecha_entrega_real' => 'Fecha Entrega Real',
             'finalizada_en' => 'Finalizada en',
             'finalizada_por' => 'Finalizada por',
             'created_by' => 'Creado por',
@@ -117,5 +125,31 @@ class OrdenServicio extends ActiveRecord
     public function getDetalles(): \yii\db\ActiveQuery
     {
         return $this->hasMany(OrdenServicioDetalle::class, ['orden_servicio_id' => 'id']);
+    }
+
+    /**
+     * Relación con Técnico asignado
+     */
+    public function getTecnico(): \yii\db\ActiveQuery
+    {
+        return $this->hasOne(Tecnico::class, ['id' => 'tecnico_id']);
+    }
+
+    /**
+     * Before save - actualizar timestamps y campos por defecto
+     */
+    public function beforeSave($insert): bool
+    {
+        if (parent::beforeSave($insert)) {
+            if ($insert) {
+                $this->created_at = new Expression('NOW()');
+                if (!$this->folio) {
+                    $this->folio = 'ORD-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                }
+            }
+            $this->updated_at = new Expression('NOW()');
+            return true;
+        }
+        return false;
     }
 }
