@@ -1,38 +1,42 @@
 ```
 # Dependencies
 vendor/
-composer.lock
-
-# Build artifacts
-frontend/web/css/app.css
-frontend/web/js/app.js
 
 # Logs
 *.log
 
-# Environment
+# Environment specific files
 .env
 .env.local
 .env.*
 
-# Editor
+# IDE files
 .vscode/
 .idea/
 *.swp
-*.tmp
+*.swo
 
-# OS
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Coverage
+# Build artifacts
+dist/
+build/
+*.o
+*.obj
+*.out
+
+# Cache directories
+.cache/
+.php_cs.cache
+
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# PHP
-*.php~
-*.bak
-*.orig
-*.rej
+# Temporary files
+*.tmp
+*.temp
 ```
