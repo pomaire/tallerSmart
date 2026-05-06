@@ -9,7 +9,7 @@
         "yiisoft/app": "dev-master",
         "yiisoft/db-mysql": "^2.0",
         "yiisoft/active-record": "^1.0",
-        "yiisoft/router-fastroute": "^3.0",
+        "yiisoft/router-fastroute": "^4.0",
         "yiisoft/middleware-dispatcher": "^5.0",
         "yiisoft/http": "^1.2",
         "yiisoft/json": "^1.0",
@@ -24,7 +24,7 @@
         "yiisoft/validator": "^2.0",
         "yiisoft/security": "^1.0",
         "yiisoft/session": "^2.0",
-        "firebase/php-jwt": "^6.10",
+        "firebase/php-jwt": "^7.0",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-intl": "*"
