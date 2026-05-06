@@ -23,7 +23,7 @@
         "yiisoft/translator": "^3.0",
         "yiisoft/validator": "^2.0",
         "yiisoft/security": "^1.0",
-        "yiisoft/session": "^2.0",
+        "yiisoft/session": "^3.0.1",
         "firebase/php-jwt": "^7.0",
         "ext-json": "*",
         "ext-pdo": "*",
