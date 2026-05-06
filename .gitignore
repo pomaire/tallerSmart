@@ -24,7 +24,21 @@ composer.lock
 .DS_Store
 Thumbs.db
 
-# Yii framework specific
-runtime/
-web/assets/
+# Tests
+tests/_output/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Build artifacts
+*.phar
+*.so
+*.dll
+*.dylib
+
+# Temp files
+*.tmp
+*.temp
 ```
