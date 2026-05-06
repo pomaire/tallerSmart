@@ -272,4 +272,93 @@ class DashboardController extends BaseController
             ],
         ];
     }
+
+    /**
+     * Obtener valor total del inventario (HU-017)
+     * GET /api/dashboard/inventario-valor
+     */
+    public function actionInventarioValor(): array
+    {
+        $valorTotal = \app\models\InventoryItem::find()
+            ->where(['activo' => true])
+            ->sum('precio_costo * stock_actual');
+
+        return [
+            'success' => true,
+            'data' => [
+                'valor_total' => (float)($valorTotal ?? 0),
+                'valor_formateado' => '$' . number_format($valorTotal ?? 0, 2),
+            ],
+        ];
+    }
+
+    /**
+     * Obtener categorías con stock bajo (HU-030)
+     * GET /api/dashboard/categorias-stock-bajo
+     */
+    public function actionCategoriasStockBajo(): array
+    {
+        $categoriasAfectadas = (new \yii\db\Query())
+            ->select(['categoria', 'COUNT(*) as cantidad_items'])
+            ->from('inventory_item')
+            ->where(['<=', 'stock_actual', new \yii\db\Expression('stock_minimo')])
+            ->andWhere(['activo' => true])
+            ->groupBy(['categoria'])
+            ->all();
+
+        $totalCategorias = count($categoriasAfectadas);
+
+        $data = [];
+        foreach ($categoriasAfectadas as $cat) {
+            $data[] = [
+                'categoria' => $cat['categoria'],
+                'cantidad_items' => (int)$cat['cantidad_items'],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'total_categorias_afectadas' => $totalCategorias,
+                'categorias' => $data,
+            ],
+        ];
+    }
+
+    /**
+     * Obtener notificaciones de stock bajo (HU-022)
+     * GET /api/dashboard/notificaciones-stock
+     */
+    public function actionNotificacionesStock(): array
+    {
+        $itemsBajoStock = \app\models\InventoryItem::find()
+            ->where(['<=', 'stock_actual', 'stock_minimo'])
+            ->andWhere(['activo' => true])
+            ->all();
+
+        $notificaciones = [];
+        foreach ($itemsBajoStock as $item) {
+            $notificaciones[] = [
+                'id' => $item->id,
+                'tipo' => 'stock_bajo',
+                'titulo' => 'Stock Bajo: ' . $item->nombre,
+                'mensaje' => $item->stock_actual == 0 
+                    ? 'Sin stock disponible' 
+                    : 'Quedan ' . $item->stock_actual . ' unidades (mínimo: ' . $item->stock_minimo . ')',
+                'prioridad' => $item->stock_actual == 0 ? 'alta' : 'media',
+                'leido' => false,
+                'fecha' => date('Y-m-d H:i:s'),
+                'icono_animado' => true, // HU-016
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $notificaciones,
+            'metadata' => [
+                'total_notificaciones' => count($notificaciones),
+                'no_leidas' => count($notificaciones),
+            ],
+        ];
+    }
 }

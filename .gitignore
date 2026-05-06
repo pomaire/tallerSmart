@@ -2,19 +2,27 @@
 # Compiled and build artifacts
 *.pyc
 __pycache__/
+*.o
+*.obj
+*.class
+*.exe
+*.dll
+*.so
+*.a
+*.out
 
 # Dependencies
 vendor/
-composer.lock
+node_modules/
+.env
+.env.local
+.env.*
 
 # Logs and temp files
 *.log
 *.tmp
-
-# Environment
-.env
-.env.local
-*.env.*
+*.swp
+*.swo
 
 # Editors
 .vscode/
@@ -24,21 +32,13 @@ composer.lock
 .DS_Store
 Thumbs.db
 
-# Tests
-tests/_output/
-
-# Coverage
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# Build artifacts
-*.phar
-*.so
-*.dll
-*.dylib
-
-# Temp files
-*.tmp
-*.temp
+# Build directories
+dist/
+build/
+target/
 ```
