@@ -1,0 +1,568 @@
+{% extends "@app/views/layouts/main.twig" %}
+{% block title %}Manual de Usuario - TallerSmart{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="manualApp()" x-init="init()">
+    
+    <!-- Header del Manual -->
+    <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    <h1 class="text-2xl font-bold text-gray-900">Manual de Usuario</h1>
+                </div>
+                
+                <!-- Buscador -->
+                <div class="relative flex-1 max-w-lg ml-8">
+                    <input 
+                        type="text" 
+                        x-model="busqueda"
+                        @input="filtrarContenido()"
+                        placeholder="Buscar en el manual..." 
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                
+                <button @click="descargarPDF()" class="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Descargar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex gap-8">
+            
+            <!-- Sidebar de Navegación -->
+            <aside class="w-64 flex-shrink-0">
+                <nav class="sticky top-24 space-y-1">
+                    <template x-for="(modulo, index) in modulos" :key="index">
+                        <a 
+                            :href="'#modulo-' + index"
+                            @click.prevent="seleccionarModulo(index)"
+                            class="block px-4 py-3 rounded-lg text-sm font-medium transition-colors"
+                            :class="moduloActivo === index ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'"
+                            x-text="modulo.titulo"
+                        ></a>
+                    </template>
+                </nav>
+            </aside>
+
+            <!-- Contenido Principal -->
+            <main class="flex-1 min-w-0">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    
+                    <!-- Introducción -->
+                    <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">Bienvenido a TallerSmart</h2>
+                        <p class="text-gray-600">Sistema integral de gestión de talleres mecánicos</p>
+                        <div class="mt-4 flex items-center gap-4 text-sm text-gray-500">
+                            <span class="flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Última actualización: Mayo 2026
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Versión 1.0.0
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Módulos del Sistema -->
+                    <div class="divide-y divide-gray-200">
+                        <template x-for="(modulo, modIndex) in modulosFiltrados" :key="modIndex">
+                            <div :id="'modulo-' + modIndex" class="scroll-mt-24">
+                                <div class="px-8 py-6">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <span class="flex items-center justify-center w-10 h-10 rounded-lg text-white font-bold text-lg"
+                                              :class="obtenerColor(modIndex)">
+                                            <span x-text="modIndex + 1"></span>
+                                        </span>
+                                        <h3 class="text-xl font-bold text-gray-900" x-text="modulo.titulo"></h3>
+                                    </div>
+                                    
+                                    <div class="prose prose-blue max-w-none">
+                                        <div class="text-gray-600 mb-4" x-html="modulo.descripcion"></div>
+                                        
+                                        <!-- Características Principales -->
+                                        <div class="mb-6">
+                                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                Características Principales
+                                            </h4>
+                                            <ul class="space-y-2">
+                                                <template x-for="caracteristica in modulo.caracteristicas" :key="caracteristica">
+                                                    <li class="flex items-start gap-2 text-gray-700">
+                                                        <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                        </svg>
+                                                        <span x-text="caracteristica"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                        
+                                        <!-- Pasos de Uso -->
+                                        <div class="mb-6">
+                                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                </svg>
+                                                ¿Cómo usarlo?
+                                            </h4>
+                                            <div class="space-y-4">
+                                                <template x-for="(paso, pasoIndex) in modulo.pasos" :key="pasoIndex">
+                                                    <div class="flex gap-3">
+                                                        <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-sm"
+                                                              x-text="pasoIndex + 1">
+                                                        </span>
+                                                        <div class="flex-1 pt-1">
+                                                            <p class="text-gray-700" x-text="paso"></p>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Consejos y Notas -->
+                                        <div x-show="modulo.consejos" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <h4 class="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                </svg>
+                                                Consejos Útiles
+                                            </h4>
+                                            <ul class="space-y-1">
+                                                <template x-for="consejo in modulo.consejos" :key="consejo">
+                                                    <li class="text-yellow-700 text-sm flex items-start gap-2">
+                                                        <span class="text-yellow-500 mt-1">•</span>
+                                                        <span x-text="consejo"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Footer del Manual -->
+                <div class="mt-8 text-center text-gray-500 text-sm">
+                    <p>¿Necesitas ayuda adicional? Contacta a soporte técnico: <a href="mailto:soporte@tallersmart.cl" class="text-blue-600 hover:underline">soporte@tallersmart.cl</a></p>
+                    <p class="mt-2">© 2026 TallerSmart. Todos los derechos reservados.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('manualApp', () => ({
+        busqueda: '',
+        moduloActivo: 0,
+        modulos: [
+            {
+                titulo: 'RBAC - Roles y Permisos',
+                descripcion: 'Gestión de usuarios, roles y permisos del sistema. Controla quién puede acceder a cada funcionalidad.',
+                caracteristicas: [
+                    'Creación y administración de roles personalizados',
+                    'Asignación granular de permisos por módulo',
+                    'Gestión de usuarios activos/inactivos',
+                    'Auditoría de accesos y cambios'
+                ],
+                pasos: [
+                    'Navega al menú "RBAC" en la barra lateral',
+                    'Selecciona la pestaña "Roles" para crear o editar roles',
+                    'Marca los permisos que tendrá cada rol',
+                    'En la pestaña "Usuarios", asigna roles a cada usuario',
+                    'Los cambios se aplican inmediatamente al iniciar sesión'
+                ],
+                consejos: [
+                    'Crea roles específicos para cada área del taller',
+                    'Revisa periódicamente los permisos asignados',
+                    'Desactiva usuarios que ya no trabajen en el taller'
+                ]
+            },
+            {
+                titulo: 'Categorías',
+                descripcion: 'Organiza los servicios del taller en categorías para una mejor gestión y búsqueda.',
+                caracteristicas: [
+                    'Clasificación jerárquica de servicios',
+                    'Códigos únicos por categoría',
+                    'Estado activo/inactivo',
+                    'Descripción detallada'
+                ],
+                pasos: [
+                    'Ve al menú "Categorías"',
+                    'Haz clic en "Nueva Categoría"',
+                    'Ingresa código, nombre y descripción',
+                    'Guarda los cambios'
+                ],
+                consejos: [
+                    'Usa códigos cortos y memorables',
+                    'Agrupa servicios similares en la misma categoría',
+                    'Mantén las categorías actualizadas según nuevos servicios'
+                ]
+            },
+            {
+                titulo: 'Servicios',
+                descripcion: 'Catálogo completo de servicios que ofrece el taller con precios y tiempos estimados.',
+                caracteristicas: [
+                    'Precios en pesos chilenos (CLP)',
+                    'Duración estimada en minutos',
+                    'Relación con categorías',
+                    'Códigos de servicio únicos',
+                    'Control de estado (activo/inactivo)'
+                ],
+                pasos: [
+                    'Accede al menú "Servicios"',
+                    'Presiona "Nuevo Servicio"',
+                    'Completa código, nombre, categoría, precio y duración',
+                    'Opcionalmente agrega descripción detallada',
+                    'Guarda el servicio'
+                ],
+                consejos: [
+                    'Actualiza precios regularmente según costos',
+                    'Incluye todos los servicios estándar del taller',
+                    'Usa descripciones claras para evitar confusiones'
+                ]
+            },
+            {
+                titulo: 'Clientes',
+                descripcion: 'Administración de la base de datos de clientes con validación de RUT chileno.',
+                caracteristicas: [
+                    'Validación automática de RUT chileno',
+                    'Formateo automático de teléfono (+56)',
+                    'Historial de vehículos por cliente',
+                    'Búsqueda rápida por RUT, nombre o teléfono',
+                    'Datos de contacto completos'
+                ],
+                pasos: [
+                    'Ve a "Clientes" en el menú principal',
+                    'Haz clic en "Nuevo Cliente"',
+                    'Ingresa RUT (se valida automáticamente)',
+                    'Completa nombre, email, teléfono y dirección',
+                    'Guarda el registro'
+                ],
+                consejos: [
+                    'Verifica siempre el RUT antes de guardar',
+                    'Mantén actualizados los datos de contacto',
+                    'Usa el historial para ver servicios anteriores'
+                ]
+            },
+            {
+                titulo: 'Vehículos',
+                descripcion: 'Registro de vehículos con validación de patente chilena y relación con clientes.',
+                caracteristicas: [
+                    'Validación de patentes chilenas (LLNNNN y LLLLNN)',
+                    'VIN (número de chasis)',
+                    'Marca, modelo, año y color',
+                    'Kilometraje actual',
+                    'Vinculación con cliente propietario'
+                ],
+                pasos: [
+                    'Navega a "Vehículos"',
+                    'Presiona "Nuevo Vehículo"',
+                    'Ingresa patente (validación automática)',
+                    'Completa marca, modelo, año y otros datos',
+                    'Selecciona el cliente propietario',
+                    'Guarda el vehículo'
+                ],
+                consejos: [
+                    'Registra todos los vehículos de clientes frecuentes',
+                    'Actualiza el kilometraje en cada visita',
+                    'Verifica la patente antes de guardar'
+                ]
+            },
+            {
+                titulo: 'Inventario',
+                descripcion: 'Control de stock de repuestos y productos con alertas de reposición.',
+                caracteristicas: [
+                    'Stock en tiempo real',
+                    'Alertas de stock bajo configurables',
+                    'Movimientos de entrada y salida',
+                    'Costo y precio de venta',
+                    'Categorización de productos',
+                    'Proveedor por producto'
+                ],
+                pasos: [
+                    'Ve a "Inventario"',
+                    'Para agregar: "Nuevo Producto"',
+                    'Ingresa código, nombre, categoría, stock mínimo',
+                    'Registra costo y precio de venta',
+                    'Los movimientos se registran automáticamente al usar en órdenes'
+                ],
+                consejos: [
+                    'Configura stocks mínimos realistas',
+                    'Revisa semanalmente las alertas de reposición',
+                    'Realiza inventario físico mensual'
+                ]
+            },
+            {
+                titulo: 'Técnicos',
+                descripcion: 'Gestión del personal técnico con especialidades y disponibilidad.',
+                caracteristicas: [
+                    'RUT válido con dígito verificador',
+                    'Especialidades múltiples',
+                    'Teléfono de contacto',
+                    'Estado laboral (activo/inactivo)',
+                    'Certificaciones y capacitaciones'
+                ],
+                pasos: [
+                    'Accede a "Técnicos"',
+                    'Haz clic en "Nuevo Técnico"',
+                    'Ingresa RUT, nombre y datos de contacto',
+                    'Selecciona especialidades',
+                    'Agrega certificaciones si corresponde',
+                    'Guarda el registro'
+                ],
+                consejos: [
+                    'Mantén actualizadas las especialidades',
+                    'Registra todas las capacitaciones realizadas',
+                    'Desactiva técnicos que ya no trabajen'
+                ]
+            },
+            {
+                titulo: 'Citas',
+                descripcion: 'Agendamiento de citas con calendario visual y gestión de horarios.',
+                caracteristicas: [
+                    'Calendario mensual interactivo',
+                    'Vista diaria y semanal',
+                    'Asignación de técnico y box',
+                    'Múltiples servicios por cita',
+                    'Recordatorios automáticos',
+                    'Estados: Pendiente, Confirmada, Completada, Cancelada'
+                ],
+                pasos: [
+                    'Ve a "Citas"',
+                    'Selecciona fecha en el calendario o haz clic en "Nueva Cita"',
+                    'Elige cliente y vehículo',
+                    'Agrega servicios a realizar',
+                    'Asigna técnico y hora',
+                    'Confirma la cita'
+                ],
+                consejos: [
+                    'Confirma citas con 24 horas de anticipación',
+                    'Deja espacios entre citas para imprevistos',
+                    'Usa los recordatorios automáticos'
+                ]
+            },
+            {
+                titulo: 'Órdenes de Servicio',
+                descripcion: 'Gestión completa del flujo de trabajo desde recepción hasta entrega del vehículo.',
+                caracteristicas: [
+                    'Flujo de estados: Pendiente → En Progreso → En Espera → Finalizado → Entregado',
+                    'Detalle de servicios y repuestos',
+                    'Cálculo automático de totales con IVA',
+                    'Asignación de técnico responsable',
+                    'Bitácora de cambios',
+                    'Impresión de orden',
+                    'Firma digital de aceptación'
+                ],
+                pasos: [
+                    'Navega a "Órdenes de Servicio"',
+                    'Haz clic en "Nueva Orden"',
+                    'Selecciona cliente, vehículo y servicios',
+                    'Agrega repuestos si corresponde',
+                    'Asigna técnico responsable',
+                    'Cambia estados según avance el trabajo',
+                    'Finaliza y genera cuenta'
+                ],
+                consejos: [
+                    'Registra todos los trabajos realizados',
+                    'Actualiza estados en tiempo real',
+                    'Usa la bitácora para notas importantes',
+                    'Imprime orden para firma del cliente'
+                ]
+            },
+            {
+                titulo: 'Pagos',
+                descripcion: 'Procesamiento de pagos con integración tributaria chilena y emisión de documentos.',
+                caracteristicas: [
+                    'Múltiples métodos de pago (efectivo, transferencia, tarjeta, cheque)',
+                    'Emisión de boletas y facturas electrónicas',
+                    'Asignación parcial o total a órdenes',
+                    'Control de caja y arqueos',
+                    'Historial de transacciones',
+                    'Validación de RUT para facturación'
+                ],
+                pasos: [
+                    'Ve a "Pagos"',
+                    'Haz clic en "Nuevo Pago"',
+                    'Selecciona método de pago',
+                    'Ingresa monto y documento tributario',
+                    'Asigna a una o más órdenes',
+                    'Registra el pago',
+                    'Imprime comprobante'
+                ],
+                consejos: [
+                    'Verifica RUT antes de emitir factura',
+                    'Realiza arqueo de caja diario',
+                    'Concilia pagos con extractos bancarios',
+                    'Mantén respaldo de todos los comprobantes'
+                ]
+            },
+            {
+                titulo: 'Notificaciones',
+                descripcion: 'Centro unificado de notificaciones del sistema en tiempo real.',
+                caracteristicas: [
+                    'Notificaciones por citas, órdenes, inventario y pagos',
+                    'Marcado como leída/no leída',
+                    'Filtros por tipo y fecha',
+                    'Preferencias de notificación',
+                    'Contador en tiempo real',
+                    'Acciones rápidas desde notificación'
+                ],
+                pasos: [
+                    'Haz clic en el ícono de campana en el header',
+                    'Revisa notificaciones nuevas',
+                    'Marca como leídas individualmente o todas',
+                    'Filtra por tipo si necesitas algo específico',
+                    'Configura preferencias en el engranaje'
+                ],
+                consejos: [
+                    'Revisa notificaciones al iniciar jornada',
+                    'Configura alertas críticas para stock bajo',
+                    'Usa filtros para encontrar notificaciones antiguas'
+                ]
+            },
+            {
+                titulo: 'AuditLog',
+                descripcion: 'Registro detallado de todas las acciones realizadas en el sistema para auditoría.',
+                caracteristicas: [
+                    'Registro inmutable de acciones',
+                    'Usuario, fecha, IP y acción realizada',
+                    'Detalle de cambios (antes/después)',
+                    'Filtros avanzados por entidad y fecha',
+                    'Exportación a CSV/PDF',
+                    'Solo accesible para administradores y auditores'
+                ],
+                pasos: [
+                    'Ve a "AuditLog" (solo administradores)',
+                    'Aplica filtros para buscar acciones específicas',
+                    'Haz clic en una fila para ver detalles',
+                    'Expande el JSON para ver cambios exactos',
+                    'Exporta reportes si es necesario'
+                ],
+                consejos: [
+                    'Revisa auditlog ante discrepancias',
+                    'Exporta logs periódicamente para respaldo',
+                    'Usa filtros para investigaciones específicas'
+                ]
+            },
+            {
+                titulo: 'Dashboard',
+                descripcion: 'Panel ejecutivo con indicadores clave y métricas del taller en tiempo real.',
+                caracteristicas: [
+                    'KPIs principales: ingresos, órdenes, citas, ticket promedio',
+                    'Gráficos de tendencias mensuales',
+                    'Top 5 servicios más solicitados',
+                    'Próximas citas y órdenes recientes',
+                    'Alertas de stock bajo',
+                    'Filtros por período',
+                    'Exportación de reportes',
+                    'Auto-refresh cada 5 minutos'
+                ],
+                pasos: [
+                    'El Dashboard es la página de inicio',
+                    'Selecciona período en el selector superior',
+                    'Revisa KPIs principales',
+                    'Analiza gráficos y tablas',
+                    'Haz clic en "Exportar" para descargar reporte',
+                    'Usa enlaces rápidos para navegar a módulos'
+                ],
+                consejos: [
+                    'Revisa dashboard diariamente al abrir el taller',
+                    'Pon atención a tendencias de ingresos',
+                    'Actúa rápido sobre alertas de stock bajo',
+                    'Exporta reportes mensuales para análisis'
+                ]
+            },
+            {
+                titulo: 'Manual de Usuario',
+                descripcion: 'Este documento que estás leyendo. Guía completa de uso del sistema.',
+                caracteristicas: [
+                    'Navegación por módulos',
+                    'Buscador integrado',
+                    'Pasos detallados por funcionalidad',
+                    'Consejos y mejores prácticas',
+                    'Descarga en PDF',
+                    'Actualizaciones periódicas'
+                ],
+                pasos: [
+                    'Usa el sidebar para navegar entre módulos',
+                    'Utiliza el buscador para encontrar temas específicos',
+                    'Lee características, pasos y consejos de cada módulo',
+                    'Descarga el PDF para consulta offline',
+                    'Consulta este manual ante dudas'
+                ],
+                consejos: [
+                    'Mantén este manual actualizado',
+                    'Comparte con nuevos empleados',
+                    'Usa el buscador para respuestas rápidas',
+                    'Sugiere mejoras al equipo de desarrollo'
+                ]
+            }
+        ],
+        modulosFiltrados: [],
+        
+        init() {
+            this.modulosFiltrados = [...this.modulos];
+            this.filtrarContenido();
+        },
+        
+        filtrarContenido() {
+            if (!this.busqueda.trim()) {
+                this.modulosFiltrados = [...this.modulos];
+                return;
+            }
+            
+            const termino = this.busqueda.toLowerCase();
+            this.modulosFiltrados = this.modulos.filter(mod => 
+                mod.titulo.toLowerCase().includes(termino) ||
+                mod.descripcion.toLowerCase().includes(termino) ||
+                mod.caracteristicas.some(c => c.toLowerCase().includes(termino))
+            );
+        },
+        
+        seleccionarModulo(index) {
+            this.moduloActivo = index;
+            document.getElementById('modulo-' + index)?.scrollIntoView({ behavior: 'smooth' });
+        },
+        
+        obtenerColor(index) {
+            const colores = [
+                'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500',
+                'bg-lime-500', 'bg-green-500', 'bg-emerald-500', 'bg-teal-500',
+                'bg-cyan-500', 'bg-sky-500', 'bg-blue-500', 'bg-indigo-500',
+                'bg-violet-500', 'bg-purple-500'
+            ];
+            return colores[index % colores.length];
+        },
+        
+        descargarPDF() {
+            alert('Generando PDF del manual completo...\n\nEsta función exportará todo el contenido a un archivo PDF descargable.');
+            // Implementar con jsPDF o similar
+        }
+    }));
+});
+</script>
+{% endblock %}
