@@ -205,4 +205,71 @@ class DashboardController extends BaseController
             'data' => $meses,
         ];
     }
+
+    /**
+     * Obtener servicios más solicitados
+     * GET /api/dashboard/servicios-mas-solicitados
+     * @param string|null $fecha_desde Fecha inicial del rango (opcional)
+     * @param string|null $fecha_hasta Fecha final del rango (opcional)
+     * @param int|null $limite Cantidad máxima de resultados (default: 10)
+     */
+    public function actionServiciosMasSolicitados(): array
+    {
+        $request = Yii::$app->request;
+        $fechaDesde = $request->get('fecha_desde');
+        $fechaHasta = $request->get('fecha_hasta');
+        $limite = (int)$request->get('limite', 10);
+
+        // Construir query para contar servicios por orden
+        $query = (new \yii\db\Query())
+            ->select([
+                'servicio.id',
+                'servicio.nombre',
+                'servicio.precio',
+                'categoria.nombre as categoria_nombre',
+                'COUNT(orden_servicio_detalle.id) as cantidad_ordenes',
+                'SUM(orden_servicio_detalle.cantidad) as cantidad_total',
+            ])
+            ->from('orden_servicio_detalle')
+            ->innerJoin('servicio', 'orden_servicio_detalle.servicio_id = servicio.id')
+            ->innerJoin('orden_servicio', 'orden_servicio_detalle.orden_servicio_id = orden_servicio.id')
+            ->leftJoin('categoria', 'servicio.categoria_id = categoria.id')
+            ->where(['orden_servicio_detalle.tipo' => 'servicio'])
+            ->groupBy(['servicio.id', 'servicio.nombre', 'servicio.precio', 'categoria.nombre'])
+            ->orderBy(['cantidad_ordenes' => SORT_DESC])
+            ->limit($limite);
+
+        // Aplicar filtros de fecha si existen
+        if ($fechaDesde) {
+            $query->andWhere(['>=', 'orden_servicio.created_at', $fechaDesde]);
+        }
+        if ($fechaHasta) {
+            $query->andWhere(['<=', 'orden_servicio.created_at', $fechaHasta]);
+        }
+
+        $resultados = $query->all();
+
+        // Formatear datos para respuesta
+        $data = [];
+        foreach ($resultados as $row) {
+            $data[] = [
+                'servicio_id' => (int)$row['id'],
+                'nombre' => $row['nombre'],
+                'categoria' => $row['categoria_nombre'] ?? 'Sin categoría',
+                'precio_base' => (float)$row['precio'],
+                'cantidad_ordenes' => (int)$row['cantidad_ordenes'],
+                'cantidad_total' => (int)$row['cantidad_total'],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $data,
+            'metadata' => [
+                'fecha_desde' => $fechaDesde,
+                'fecha_hasta' => $fechaHasta,
+                'total_resultados' => count($data),
+            ],
+        ];
+    }
 }

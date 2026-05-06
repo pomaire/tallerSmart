@@ -252,9 +252,16 @@ CREATE TABLE IF NOT EXISTS orden_servicio_detalle (
     descripcion TEXT,
     cantidad INT DEFAULT 1,
     precioUnitario DECIMAL(10,2) NOT NULL,
+    precioOriginal DECIMAL(10,2) COMMENT 'Precio original del catálogo al momento de crear',
     subtotal DECIMAL(10,2) NOT NULL,
+    tipo VARCHAR(50) DEFAULT 'servicio' COMMENT 'Tipo de detalle: servicio, repuesto, otro',
+    notas TEXT COMMENT 'Notas adicionales sobre este servicio en la orden',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (ordenId) REFERENCES orden_servicio(id) ON DELETE CASCADE,
-    FOREIGN KEY (servicioId) REFERENCES servicio(id) ON DELETE SET NULL
+    FOREIGN KEY (servicioId) REFERENCES servicio(id) ON DELETE SET NULL,
+    INDEX idx_ordenId (ordenId),
+    INDEX idx_servicioId (servicioId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: inventory_items

@@ -19,10 +19,10 @@ class OrdenServicioDetalle extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['orden_servicio_id', 'descripcion'], 'required'],
+            [['orden_servicio_id'], 'required'],
             [['orden_servicio_id', 'servicio_id', 'cantidad'], 'integer'],
-            [['descripcion'], 'string'],
-            [['precio_unitario'], 'number'],
+            [['descripcion', 'notas'], 'string'],
+            [['precio_unitario', 'precio_original'], 'number'],
             [['tipo'], 'string', 'max' => 50],
         ];
     }
@@ -36,7 +36,9 @@ class OrdenServicioDetalle extends ActiveRecord
             'descripcion' => 'Descripción',
             'cantidad' => 'Cantidad',
             'precio_unitario' => 'Precio Unitario',
+            'precio_original' => 'Precio Original del Catálogo',
             'tipo' => 'Tipo',
+            'notas' => 'Notas',
         ];
     }
 
@@ -48,5 +50,24 @@ class OrdenServicioDetalle extends ActiveRecord
     public function getServicio(): \yii\db\ActiveQuery
     {
         return $this->hasOne(Servicio::class, ['id' => 'servicio_id']);
+    }
+
+    /**
+     * Calcula el subtotal del detalle (cantidad * precio unitario)
+     */
+    public function getSubtotal(): float
+    {
+        return $this->cantidad * $this->precio_unitario;
+    }
+
+    /**
+     * Obtiene el servicio relacionado y devuelve su duración estimada
+     */
+    public function getDuracionEstimada(): ?int
+    {
+        if ($this->servicio) {
+            return $this->servicio->duracion_estimada;
+        }
+        return null;
     }
 }

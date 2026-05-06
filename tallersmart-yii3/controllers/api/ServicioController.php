@@ -20,7 +20,7 @@ class ServicioController extends BaseController
     public function behaviors(): array
     {
         $behaviors = parent::behaviors();
-        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete'];
+        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete', 'duplicar', 'exportar'];
         return $behaviors;
     }
 
@@ -136,11 +136,104 @@ class ServicioController extends BaseController
     public function actionDelete($id): array
     {
         $model = $this->findModel($id);
-        $model->delete();
+
+        // Verificar si el servicio tiene órdenes asociadas
+        $ordenesAsociadas = \app\models\OrdenServicioDetalle::find()
+            ->where(['servicio_id' => $model->id])
+            ->joinWith('ordenServicio')
+            ->andWhere(['!=', 'orden_servicio.estado', 'finalizada'])
+            ->count();
+
+        if ($ordenesAsociadas > 0) {
+            throw new BadRequestHttpException('El servicio tiene órdenes activas asociadas y no puede ser eliminado');
+        }
+
+        // Soft delete: desactivar en lugar de eliminar físicamente
+        $model->activo = false;
+        $model->nombre = '[ELIMINADO] ' . $model->nombre;
+        
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
 
         return [
             'success' => true,
-            'message' => 'Servicio eliminado correctamente',
+            'message' => 'Servicio eliminado correctamente (desactivado)',
+        ];
+    }
+
+    /**
+     * Duplicar servicio existente
+     * POST /api/servicios/{id}/duplicar
+     */
+    public function actionDuplicar($id): array
+    {
+        $original = $this->findModel($id);
+
+        // Crear nuevo servicio con datos copiados
+        $model = new Servicio();
+        $model->categoria_id = $original->categoria_id;
+        $model->nombre = $original->nombre . ' (Copia)';
+        $model->descripcion = $original->descripcion;
+        $model->precio = $original->precio;
+        $model->duracion_estimada = $original->duracion_estimada;
+        $model->activo = true; // El duplicado siempre empieza activo
+
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
+
+        return [
+            'success' => true,
+            'data' => $model,
+            'message' => 'Servicio duplicado correctamente',
+        ];
+    }
+
+    /**
+     * Exportar catálogo de servicios a CSV
+     * GET /api/servicios/exportar
+     */
+    public function actionExportar(): array
+    {
+        $request = Yii::$app->request;
+        $categoriaId = $request->get('categoria_id');
+        $activo = $request->get('activo');
+
+        // Obtener todos los servicios con sus categorías
+        $query = Servicio::find()
+            ->joinWith('categoria')
+            ->orderBy(['servicio.nombre' => SORT_ASC]);
+
+        if ($categoriaId) {
+            $query->andWhere(['servicio.categoria_id' => $categoriaId]);
+        }
+
+        if ($activo !== null) {
+            $query->andWhere(['servicio.activo' => (bool)$activo]);
+        }
+
+        $servicios = $query->all();
+
+        // Preparar datos para CSV
+        $datos = [];
+        foreach ($servicios as $servicio) {
+            $datos[] = [
+                'nombre' => $servicio->nombre,
+                'categoria' => $servicio->categoria ? $servicio->categoria->nombre : 'Sin categoría',
+                'precio' => number_format($servicio->precio, 2, '.', ''),
+                'duracion_minutos' => $servicio->duracion_estimada,
+                'descripcion' => str_replace(["\n", "\r", ";"], " ", $servicio->descripcion ?? ''),
+                'activo' => $servicio->activo ? 'Sí' : 'No',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $datos,
+            'total' => count($datos),
+            'formato' => 'CSV',
+            'columnas' => ['nombre', 'categoria', 'precio', 'duracion_minutos', 'descripcion', 'activo'],
         ];
     }
 
