@@ -1,3 +1,814 @@
 {% extends "@app/views/layouts/main.twig" %}
-{% block title %}Pago - TallerSmart{% endblock %}
-{% block content %}<div class="p-6"><h1 class="text-2xl font-bold">Pago</h1><p>Vista en desarrollo</p></div>{% endblock %}
+
+{% block title %}Pagos - TallerSmart{% endblock %}
+
+{% block content %}
+<div class="container-fluid" x-data="pagosApp()" x-init="init()">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-money-bill-wave me-2"></i>Pagos
+        </h1>
+        <button @click="abrirModalNuevoPago()" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nuevo Pago
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" class="form-control" x-model="filtros.busqueda" 
+                           placeholder="Cliente, RUT, N° Documento..."
+                           @input.debounce.500ms="buscar()">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Método de Pago</label>
+                    <select class="form-select" x-model="filtros.metodo_pago" @change="buscar()">
+                        <option value="">Todos</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="debito">Tarjeta Débito</option>
+                        <option value="credito">Tarjeta Crédito</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="abono">Abono en Cuenta</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo Documento</label>
+                    <select class="form-select" x-model="filtros.tipo_documento" @change="buscar()">
+                        <option value="">Todos</option>
+                        <option value="boleta">Boleta</option>
+                        <option value="factura">Factura</option>
+                        <option value="ticket">Ticket</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select" x-model="filtros.estado" @change="buscar()">
+                        <option value="">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="aprobado">Aprobado</option>
+                        <option value="rechazado">Rechazado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Desde</label>
+                    <input type="date" class="form-control" x-model="filtros.fecha_desde" @change="buscar()">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <button @click="resetearFiltros()" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen de Caja -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Ingresos Hoy</h6>
+                    <h3 class="mb-0" x-text="formatearCLP(resumenCaja.ingresos_hoy)"></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Ingresos Mes</h6>
+                    <h3 class="mb-0" x-text="formatearCLP(resumenCaja.ingresos_mes)"></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Pagos Pendientes</h6>
+                    <h3 class="mb-0" x-text="formatearCLP(resumenCaja.pendientes)"></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Saldo Caja</h6>
+                    <h3 class="mb-0" x-text="formatearCLP(resumenCaja.saldo_caja)"></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Pagos -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-list me-2"></i>Listado de Pagos</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Documento</th>
+                        <th>Cliente</th>
+                        <th>RUT</th>
+                        <th>Método</th>
+                        <th class="text-end">Monto</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template for="pago in pagos">
+                        <tr>
+                            <td x-text="formatearFecha(pago.fecha_pago)"></td>
+                            <td>
+                                <span class="badge" 
+                                      :class="{
+                                        'bg-secondary': pago.tipo_documento === 'ticket',
+                                        'bg-info': pago.tipo_documento === 'boleta',
+                                        'bg-primary': pago.tipo_documento === 'factura'
+                                      }">
+                                    <span x-text="pago.tipo_documento?.toUpperCase()"></span>
+                                    <span x-text="'-' + pago.numero_documento"></span>
+                                </span>
+                            </td>
+                            <td x-text="pago.cliente?.nombre"></td>
+                            <td x-text="pago.cliente?.rut"></td>
+                            <td>
+                                <i :class="getIconoMetodo(pago.metodo_pago)" class="me-1"></i>
+                                <span x-text="formatearMetodoPago(pago.metodo_pago)"></span>
+                            </td>
+                            <td class="text-end fw-bold" x-text="formatearCLP(pago.monto)"></td>
+                            <td>
+                                <span class="badge" 
+                                      :class="{
+                                        'bg-warning': pago.estado === 'pendiente',
+                                        'bg-success': pago.estado === 'aprobado',
+                                        'bg-danger': pago.estado === 'rechazado'
+                                      }"
+                                      x-text="formatearEstado(pago.estado)"></span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button @click="verDetalle(pago)" class="btn btn-outline-info" title="Ver">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button @click="imprimirComprobante(pago)" class="btn btn-outline-secondary" title="Imprimir">
+                                        <i class="fas fa-print"></i>
+                                    </button>
+                                    <button @click="asignarOrdenes(pago)" class="btn btn-outline-primary" title="Asignar a Órdenes">
+                                        <i class="fas fa-link"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="cargando">
+                        <td colspan="8" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </td>
+                    </tr>
+                    <tr x-show="!cargando && pagos.length === 0">
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            No se encontraron pagos
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Paginación -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">Mostrando <span x-text="pagos.length"></span> registros</small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                        <a class="page-link" href="#" @click.prevent="cambiarPagina(paginaActual - 1)">Anterior</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#" x-text="paginaActual"></a></li>
+                    <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                        <a class="page-link" href="#" @click.prevent="cambiarPagina(paginaActual + 1)">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo/Editar Pago -->
+    <div class="modal fade" x-show="modales.pago" tabindex="-1" style="display: none;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" x-text="edicion ? 'Editar Pago' : 'Nuevo Pago'"></h5>
+                    <button type="button" class="btn-close" @click="cerrarModalPago()"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="guardarPago()">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo Documento *</label>
+                                <select class="form-select" x-model="formulario.tipo_documento" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="boleta">Boleta</option>
+                                    <option value="factura">Factura</option>
+                                    <option value="ticket">Ticket</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Número Documento *</label>
+                                <input type="text" class="form-control" x-model="formulario.numero_documento" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Fecha Pago *</label>
+                                <input type="date" class="form-control" x-model="formulario.fecha_pago" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Cliente *</label>
+                                <select class="form-select" x-model="formulario.cliente_id" required @change="onClienteChange()">
+                                    <option value="">Seleccione...</option>
+                                    <template for="cliente in clientes">
+                                        <option :value="cliente.id" x-text="cliente.nombre + ' (' + cliente.rut + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">RUT Cliente</label>
+                                <input type="text" class="form-control" x-model="formulario.rut_cliente" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Método de Pago *</label>
+                                <select class="form-select" x-model="formulario.metodo_pago" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="debito">Tarjeta Débito</option>
+                                    <option value="credito">Tarjeta Crédito</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="abono">Abono en Cuenta</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Monto Total *</label>
+                                <input type="number" class="form-control" x-model="formulario.monto" min="1" step="1" required>
+                                <small class="text-muted">En pesos chilenos (CLP)</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" x-model="formulario.estado">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="aprobado">Aprobado</option>
+                                    <option value="rechazado">Rechazado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control" x-model="formulario.observaciones" rows="2"></textarea>
+                        </div>
+                        
+                        <!-- Datos adicionales según método de pago -->
+                        <template x-if="formulario.metodo_pago === 'transferencia'">
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">N° Operación</label>
+                                        <input type="text" class="form-control" x-model="formulario.nro_operacion">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Banco</label>
+                                        <input type="text" class="form-control" x-model="formulario.banco">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template x-if="formulario.metodo_pago === 'cheque'">
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">N° Cheque</label>
+                                        <input type="text" class="form-control" x-model="formulario.nro_cheque">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Banco Emisor</label>
+                                        <input type="text" class="form-control" x-model="formulario.banco_emisor">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template x-if="formulario.metodo_pago === 'credito' || formulario.metodo_pago === 'debito'">
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Últimos 4 Dígitos</label>
+                                        <input type="text" class="form-control" x-model="formulario.tarjeta_ultimos_4" maxlength="4">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Autorización</label>
+                                        <input type="text" class="form-control" x-model="formulario.codigo_autorizacion">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="cerrarModalPago()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Pago</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ver Detalle -->
+    <div class="modal fade" x-show="modales.detalle" tabindex="-1" style="display: none;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle del Pago</h5>
+                    <button type="button" class="btn-close" @click="modales.detalle = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Información del Documento</h6>
+                            <p><strong>Tipo:</strong> <span x-text="pagoSeleccionado?.tipo_documento?.toUpperCase()"></span></p>
+                            <p><strong>Número:</strong> <span x-text="pagoSeleccionado?.numero_documento"></span></p>
+                            <p><strong>Fecha:</strong> <span x-text="formatearFecha(pagoSeleccionado?.fecha_pago)"></span></p>
+                            <p><strong>Estado:</strong> 
+                                <span class="badge" 
+                                      :class="{
+                                        'bg-warning': pagoSeleccionado?.estado === 'pendiente',
+                                        'bg-success': pagoSeleccionado?.estado === 'aprobado',
+                                        'bg-danger': pagoSeleccionado?.estado === 'rechazado'
+                                      }"
+                                      x-text="formatearEstado(pagoSeleccionado?.estado)"></span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Información del Cliente</h6>
+                            <p><strong>Nombre:</strong> <span x-text="pagoSeleccionado?.cliente?.nombre"></span></p>
+                            <p><strong>RUT:</strong> <span x-text="pagoSeleccionado?.cliente?.rut"></span></p>
+                            <p><strong>Email:</strong> <span x-text="pagoSeleccionado?.cliente?.email"></span></p>
+                            <p><strong>Teléfono:</strong> <span x-text="pagoSeleccionado?.cliente?.telefono"></span></p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Detalles del Pago</h6>
+                            <p><strong>Método:</strong> 
+                                <i :class="getIconoMetodo(pagoSeleccionado?.metodo_pago)" class="me-1"></i>
+                                <span x-text="formatearMetodoPago(pagoSeleccionado?.metodo_pago)"></span>
+                            </p>
+                            <p><strong>Monto:</strong> <span class="fw-bold" x-text="formatearCLP(pagoSeleccionado?.monto)"></span></p>
+                            <template x-if="pagoSeleccionado?.nro_operacion">
+                                <p><strong>N° Operación:</strong> <span x-text="pagoSeleccionado?.nro_operacion"></span></p>
+                            </template>
+                            <template x-if="pagoSeleccionado?.codigo_autorizacion">
+                                <p><strong>Autorización:</strong> <span x-text="pagoSeleccionado?.codigo_autorizacion"></span></p>
+                            </template>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Órdenes Asociadas</h6>
+                            <ul class="list-group list-group-flush">
+                                <template for="asignacion in pagoSeleccionado?.asignaciones">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span x-text="'OS-' + asignacion.orden?.numero"></span>
+                                        <span class="badge bg-primary rounded-pill" x-text="formatearCLP(asignacion.monto_asignado)"></span>
+                                    </li>
+                                </template>
+                                <li x-show="!pagoSeleccionado?.asignaciones?.length" class="list-group-item text-muted">
+                                    Sin órdenes asociadas
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Observaciones</h6>
+                        <p class="text-muted" x-text="pagoSeleccionado?.observaciones || 'Sin observaciones'"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="modales.detalle = false">Cerrar</button>
+                    <button type="button" class="btn btn-primary" @click="imprimirComprobante(pagoSeleccionado)">
+                        <i class="fas fa-print me-1"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Asignar a Órdenes -->
+    <div class="modal fade" x-show="modales.asignar" tabindex="-1" style="display: none;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignar Pago a Órdenes</h5>
+                    <button type="button" class="btn-close" @click="modales.asignar = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Monto disponible para asignar:</strong></span>
+                            <span class="fw-bold text-success" x-text="formatearCLP(montoDisponible)"></span>
+                        </div>
+                    </div>
+                    
+                    <h6>Órdenes con Saldo Pendiente</h6>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Cliente</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Pagado</th>
+                                    <th class="text-end">Pendiente</th>
+                                    <th class="text-center">Asignar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for="orden in ordenesPendientes">
+                                    <tr>
+                                        <td>
+                                            <strong x-text="'OS-' + orden.numero"></strong>
+                                        </td>
+                                        <td x-text="orden.cliente?.nombre"></td>
+                                        <td class="text-end" x-text="formatearCLP(orden.total)"></td>
+                                        <td class="text-end text-success" x-text="formatearCLP(orden.total_pagado)"></td>
+                                        <td class="text-end text-danger fw-bold" x-text="formatearCLP(orden.saldo_pendiente)"></td>
+                                        <td class="text-center">
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   style="width: 100px;"
+                                                   min="0" 
+                                                   :max="orden.saldo_pendiente"
+                                                   x-model="asignaciones[orden.id]"
+                                                   @input="validarAsignacion(orden.id, orden.saldo_pendiente)">
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="!ordenesPendientes?.length">
+                                    <td colspan="6" class="text-center text-muted py-3">
+                                        No hay órdenes pendientes de pago
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between">
+                            <strong>Total a asignar:</strong>
+                            <strong class="text-primary" x-text="formatearCLP(calcularTotalAsignado())"></strong>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <strong>Saldo restante:</strong>
+                            <strong :class="calcularSaldoRestante() >= 0 ? 'text-success' : 'text-danger'" 
+                                    x-text="formatearCLP(calcularSaldoRestante())"></strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="modales.asignar = false">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @click="confirmarAsignacion()" 
+                            :disabled="calcularTotalAsignado() <= 0 || calcularSaldoRestante() < 0">
+                        Confirmar Asignación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('pagosApp', () => ({
+        pagos: [],
+        pagoSeleccionado: null,
+        cargando: false,
+        edicion: false,
+        
+        // Paginación
+        paginaActual: 1,
+        totalPaginas: 1,
+        
+        // Catálogos
+        clientes: [],
+        ordenesPendientes: [],
+        
+        // Resumen de caja
+        resumenCaja: {
+            ingresos_hoy: 0,
+            ingresos_mes: 0,
+            pendientes: 0,
+            saldo_caja: 0
+        },
+        
+        // Filtros
+        filtros: {
+            busqueda: '',
+            metodo_pago: '',
+            tipo_documento: '',
+            estado: '',
+            fecha_desde: '',
+            fecha_hasta: ''
+        },
+        
+        // Formulario
+        formulario: {
+            id: null,
+            tipo_documento: '',
+            numero_documento: '',
+            fecha_pago: '',
+            cliente_id: '',
+            rut_cliente: '',
+            metodo_pago: '',
+            monto: 0,
+            estado: 'pendiente',
+            observaciones: '',
+            nro_operacion: '',
+            banco: '',
+            nro_cheque: '',
+            banco_emisor: '',
+            tarjeta_ultimos_4: '',
+            codigo_autorizacion: ''
+        },
+        
+        // Asignaciones
+        asignaciones: {},
+        montoDisponible: 0,
+        
+        // Modales
+        modales: {
+            pago: false,
+            detalle: false,
+            asignar: false
+        },
+        
+        async init() {
+            await Promise.all([
+                this.cargarPagos(),
+                this.cargarClientes(),
+                this.cargarResumenCaja()
+            ]);
+        },
+        
+        async cargarPagos() {
+            this.cargando = true;
+            try {
+                const params = new URLSearchParams({
+                    ...this.filtros,
+                    page: this.paginaActual,
+                    per_page: 20
+                });
+                const response = await fetch(`/api/pago?${params}`);
+                const data = await response.json();
+                this.pagos = data.items || data;
+                this.totalPaginas = data.total_pages || 1;
+            } catch (error) {
+                console.error('Error cargando pagos:', error);
+                alert('Error al cargar los pagos');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        async cargarClientes() {
+            try {
+                const response = await fetch('/api/cliente');
+                this.clientes = await response.json();
+            } catch (error) {
+                console.error('Error cargando clientes:', error);
+            }
+        },
+        
+        async cargarResumenCaja() {
+            try {
+                const response = await fetch('/api/dashboard/stats');
+                this.resumenCaja = await response.json();
+            } catch (error) {
+                console.error('Error cargando resumen:', error);
+            }
+        },
+        
+        buscar() {
+            this.paginaActual = 1;
+            this.cargarPagos();
+        },
+        
+        resetearFiltros() {
+            this.filtros = {
+                busqueda: '',
+                metodo_pago: '',
+                tipo_documento: '',
+                estado: '',
+                fecha_desde: '',
+                fecha_hasta: ''
+            };
+            this.paginaActual = 1;
+            this.cargarPagos();
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina < 1 || pagina > this.totalPaginas) return;
+            this.paginaActual = pagina;
+            this.cargarPagos();
+        },
+        
+        abrirModalNuevoPago() {
+            this.edicion = false;
+            this.formulario = {
+                id: null,
+                tipo_documento: '',
+                numero_documento: '',
+                fecha_pago: new Date().toISOString().split('T')[0],
+                cliente_id: '',
+                rut_cliente: '',
+                metodo_pago: '',
+                monto: 0,
+                estado: 'pendiente',
+                observaciones: '',
+                nro_operacion: '',
+                banco: '',
+                nro_cheque: '',
+                banco_emisor: '',
+                tarjeta_ultimos_4: '',
+                codigo_autorizacion: ''
+            };
+            this.modales.pago = true;
+        },
+        
+        cerrarModalPago() {
+            this.modales.pago = false;
+        },
+        
+        onClienteChange() {
+            const cliente = this.clientes.find(c => c.id === this.formulario.cliente_id);
+            if (cliente) {
+                this.formulario.rut_cliente = cliente.rut;
+            }
+        },
+        
+        async guardarPago() {
+            try {
+                const url = this.edicion 
+                    ? `/api/pago/${this.formulario.id}`
+                    : '/api/pago';
+                const method = this.edicion ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.formulario)
+                });
+                
+                if (response.ok) {
+                    await this.cargarPagos();
+                    await this.cargarResumenCaja();
+                    this.cerrarModalPago();
+                    alert('Pago guardado exitosamente');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.message || 'No se pudo guardar'));
+                }
+            } catch (error) {
+                console.error('Error guardando pago:', error);
+                alert('Error al guardar el pago');
+            }
+        },
+        
+        verDetalle(pago) {
+            this.pagoSeleccionado = pago;
+            this.modales.detalle = true;
+        },
+        
+        imprimirComprobante(pago) {
+            window.open(`/api/pago/${pago.id}/imprimir`, '_blank');
+        },
+        
+        async asignarOrdenes(pago) {
+            this.pagoSeleccionado = pago;
+            this.montoDisponible = pago.monto - (pago.total_asignado || 0);
+            
+            try {
+                const response = await fetch('/api/orden-servicio?con_saldo_pendiente=1');
+                this.ordenesPendientes = await response.json();
+                this.asignaciones = {};
+                this.modales.asignar = true;
+            } catch (error) {
+                console.error('Error cargando órdenes:', error);
+            }
+        },
+        
+        validarAsignacion(ordenId, maximo) {
+            const valor = parseFloat(this.asignaciones[ordenId]) || 0;
+            if (valor > maximo) {
+                this.asignaciones[ordenId] = maximo;
+                alert('El monto no puede superar el saldo pendiente');
+            }
+        },
+        
+        calcularTotalAsignado() {
+            return Object.values(this.asignaciones).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+        },
+        
+        calcularSaldoRestante() {
+            return this.montoDisponible - this.calcularTotalAsignado();
+        },
+        
+        async confirmarAsignacion() {
+            try {
+                const asignacionesData = Object.entries(this.asignaciones)
+                    .filter(([_, monto]) => monto > 0)
+                    .map(([ordenId, monto]) => ({
+                        orden_id: parseInt(ordenId),
+                        monto_asignado: parseFloat(monto)
+                    }));
+                
+                const response = await fetch(`/api/pago/${this.pagoSeleccionado.id}/asignar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ asignaciones: asignacionesData })
+                });
+                
+                if (response.ok) {
+                    await this.cargarPagos();
+                    this.modales.asignar = false;
+                    alert('Asignación realizada exitosamente');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.message || 'No se pudo asignar'));
+                }
+            } catch (error) {
+                console.error('Error asignando:', error);
+                alert('Error al realizar la asignación');
+            }
+        },
+        
+        // Helpers
+        getIconoMetodo(metodo) {
+            const iconos = {
+                'efectivo': 'fas fa-money-bill',
+                'transferencia': 'fas fa-university',
+                'debito': 'fas fa-credit-card',
+                'credito': 'fas fa-credit-card',
+                'cheque': 'fas fa-file-invoice-dollar',
+                'abono': 'fas fa-wallet'
+            };
+            return iconos[metodo] || 'fas fa-question';
+        },
+        
+        formatearMetodoPago(metodo) {
+            const metodos = {
+                'efectivo': 'Efectivo',
+                'transferencia': 'Transferencia',
+                'debito': 'Tarjeta Débito',
+                'credito': 'Tarjeta Crédito',
+                'cheque': 'Cheque',
+                'abono': 'Abono en Cuenta'
+            };
+            return metodos[metodo] || metodo;
+        },
+        
+        formatearEstado(estado) {
+            const estados = {
+                'pendiente': 'Pendiente',
+                'aprobado': 'Aprobado',
+                'rechazado': 'Rechazado'
+            };
+            return estados[estado] || estado;
+        },
+        
+        formatearFecha(fecha) {
+            if (!fecha) return '';
+            return new Date(fecha).toLocaleDateString('es-CL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+        
+        formatearCLP(monto) {
+            return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                minimumFractionDigits: 0
+            }).format(monto || 0);
+        }
+    }));
+});
+</script>
+{% endblock %}
