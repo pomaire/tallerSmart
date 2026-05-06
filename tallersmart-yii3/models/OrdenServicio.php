@@ -51,6 +51,54 @@ class OrdenServicio extends ActiveRecord
         ];
     }
 
+    /**
+     * Verifica si la orden está finalizada/cerrada
+     */
+    public function getEstaFinalizada(): bool
+    {
+        return $this->estado === 'finalizada' || $this->estado === 'facturada';
+    }
+
+    /**
+     * Verifica si la orden está facturada
+     */
+    public function getEstaFacturada(): bool
+    {
+        return $this->estado === 'facturada';
+    }
+
+    /**
+     * Calcula la duración total estimada de todos los servicios en la orden
+     */
+    public function getDuracionTotal(): int
+    {
+        $duracionTotal = 0;
+        foreach ($this->detalles as $detalle) {
+            if ($detalle->servicio && $detalle->servicio->duracion_estimada) {
+                $duracionTotal += $detalle->servicio->duracion_estimada * $detalle->cantidad;
+            }
+        }
+        return $duracionTotal;
+    }
+
+    /**
+     * Formatea la duración total en formato legible (X horas Y minutos)
+     */
+    public function getDuracionTotalFormateada(): string
+    {
+        $minutos = $this->duracionTotal;
+        $horas = intdiv($minutos, 60);
+        $minutosRestantes = $minutos % 60;
+        
+        if ($horas > 0 && $minutosRestantes > 0) {
+            return "{$horas} hora(s) {$minutosRestantes} minuto(s)";
+        } elseif ($horas > 0) {
+            return "{$horas} hora(s)";
+        } else {
+            return "{$minutosRestantes} minuto(s)";
+        }
+    }
+
     public function getCita(): \yii\db\ActiveQuery
     {
         return $this->hasOne(Cita::class, ['id' => 'cita_id']);

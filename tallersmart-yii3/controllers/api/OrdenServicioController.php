@@ -22,7 +22,7 @@ class OrdenServicioController extends BaseController
     public function behaviors(): array
     {
         $behaviors = parent::behaviors();
-        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete', 'finalizar'];
+        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete', 'finalizar', 'agregar-servicio', 'eliminar-servicio', 'actualizar-precio'];
         return $behaviors;
     }
 
@@ -82,9 +82,45 @@ class OrdenServicioController extends BaseController
     {
         $model = $this->findModel($id);
         
+        // Obtener detalles con información completa del servicio
+        $detalles = [];
+        foreach ($model->detalles as $detalle) {
+            $detalles[] = [
+                'id' => $detalle->id,
+                'servicio_id' => $detalle->servicio_id,
+                'servicio_nombre' => $detalle->servicio ? $detalle->servicio->nombre : $detalle->descripcion,
+                'descripcion' => $detalle->descripcion,
+                'cantidad' => $detalle->cantidad,
+                'precio_unitario' => $detalle->precio_unitario,
+                'precio_original' => $detalle->precio_original,
+                'subtotal' => $detalle->subtotal,
+                'tipo' => $detalle->tipo,
+                'notas' => $detalle->notas ?? '',
+                'duracion_estimada' => $detalle->duracionEstimada,
+            ];
+        }
+        
         return [
             'success' => true,
-            'data' => $model,
+            'data' => [
+                'id' => $model->id,
+                'numero_orden' => $model->numero_orden,
+                'estado' => $model->estado,
+                'cliente' => $model->cliente,
+                'vehiculo' => $model->vehiculo,
+                'descripcion_problema' => $model->descripcion_problema,
+                'diagnostico' => $model->diagnostico,
+                'notas_internas' => $model->notas_internas,
+                'kilometraje' => $model->kilometraje,
+                'total' => $model->total,
+                'esta_finalizada' => $model->estaFinalizada,
+                'esta_facturada' => $model->estaFacturada,
+                'duracion_total_minutos' => $model->duracionTotal,
+                'duracion_total_formateada' => $model->duracionTotalFormateada,
+                'created_at' => $model->created_at,
+                'updated_at' => $model->updated_at,
+                'detalles' => $detalles,
+            ],
         ];
     }
 
@@ -227,6 +263,183 @@ class OrdenServicioController extends BaseController
         return [
             'success' => true,
             'message' => 'Orden de servicio eliminada correctamente',
+        ];
+    }
+
+    /**
+     * Agregar servicio a orden existente
+     * POST /api/ordenes-servicio/{id}/agregar-servicio
+     */
+    public function actionAgregarServicio($id): array
+    {
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+
+        // Validar que la orden no esté finalizada/cerrada
+        if ($model->estaFinalizada) {
+            throw new BadRequestHttpException('No se pueden agregar servicios a una orden finalizada');
+        }
+
+        $servicioId = $request->post('servicio_id');
+        $cantidad = (int)($request->post('cantidad', 1));
+        $notas = $request->post('notas', '');
+
+        if (!$servicioId) {
+            throw new BadRequestHttpException('El ID del servicio es requerido');
+        }
+
+        // Obtener servicio del catálogo
+        $servicio = Servicio::findOne($servicioId);
+        if (!$servicio) {
+            throw new NotFoundHttpException('Servicio no encontrado en el catálogo');
+        }
+
+        // Crear detalle de orden
+        $detalle = new OrdenServicioDetalle();
+        $detalle->orden_servicio_id = $model->id;
+        $detalle->servicio_id = $servicioId;
+        $detalle->descripcion = $servicio->nombre;
+        $detalle->cantidad = $cantidad;
+        $detalle->precio_unitario = (float)$request->post('precio_unitario', $servicio->precio);
+        $detalle->precio_original = $servicio->precio;
+        $detalle->tipo = 'servicio';
+        $detalle->notas = $notas;
+
+        if (!$detalle->save()) {
+            throw new BadRequestHttpException(json_encode($detalle->getErrors()));
+        }
+
+        // Recalcular total de la orden
+        $total = 0;
+        foreach ($model->detalles as $d) {
+            $total += $d->cantidad * $d->precio_unitario;
+        }
+        $model->total = $total;
+        $model->save(false);
+
+        return [
+            'success' => true,
+            'data' => $detalle,
+            'message' => 'Servicio agregado correctamente a la orden',
+            'total_actualizado' => $total,
+        ];
+    }
+
+    /**
+     * Eliminar servicio de orden existente
+     * DELETE /api/ordenes-servicio/{idOrden}/eliminar-servicio/{idDetalle}
+     */
+    public function actionEliminarServicio($idOrden, $idDetalle): array
+    {
+        $model = $this->findModel($idOrden);
+
+        // Validar que la orden no esté facturada
+        if ($model->estaFacturada) {
+            throw new BadRequestHttpException('No se pueden eliminar servicios de una orden facturada');
+        }
+
+        // Buscar el detalle
+        $detalle = OrdenServicioDetalle::findOne($idDetalle);
+        if (!$detalle) {
+            throw new NotFoundHttpException('Detalle de orden no encontrado');
+        }
+
+        // Verificar que el detalle pertenezca a la orden
+        if ($detalle->orden_servicio_id != $idOrden) {
+            throw new BadRequestHttpException('El detalle no pertenece a esta orden');
+        }
+
+        // Eliminar el detalle
+        $detalle->delete();
+
+        // Recalcular total de la orden
+        $total = 0;
+        foreach ($model->detalles as $d) {
+            $total += $d->cantidad * $d->precio_unitario;
+        }
+        $model->total = $total;
+        $model->save(false);
+
+        return [
+            'success' => true,
+            'message' => 'Servicio eliminado correctamente de la orden',
+            'total_actualizado' => $total,
+        ];
+    }
+
+    /**
+     * Modificar precio de servicio en orden
+     * PUT /api/ordenes-servicio/{idOrden}/actualizar-precio/{idDetalle}
+     */
+    public function actionActualizarPrecio($idOrden, $idDetalle): array
+    {
+        $model = $this->findModel($idOrden);
+        $request = Yii::$app->request;
+
+        // Validar que la orden no esté facturada
+        if ($model->estaFacturada) {
+            throw new BadRequestHttpException('No se puede modificar el precio de una orden facturada');
+        }
+
+        // Buscar el detalle
+        $detalle = OrdenServicioDetalle::findOne($idDetalle);
+        if (!$detalle) {
+            throw new NotFoundHttpException('Detalle de orden no encontrado');
+        }
+
+        // Verificar que el detalle pertenezca a la orden
+        if ($detalle->orden_servicio_id != $idOrden) {
+            throw new BadRequestHttpException('El detalle no pertenece a esta orden');
+        }
+
+        $nuevoPrecio = (float)$request->post('precio_unitario');
+        $justificacion = $request->post('justificacion', '');
+
+        if ($nuevoPrecio < 0) {
+            throw new BadRequestHttpException('El precio no puede ser negativo');
+        }
+
+        // Guardar precio anterior para auditoría
+        $precioAnterior = $detalle->precio_unitario;
+
+        // Actualizar precio
+        $detalle->precio_unitario = $nuevoPrecio;
+        
+        if (!$detalle->save()) {
+            throw new BadRequestHttpException(json_encode($detalle->getErrors()));
+        }
+
+        // Registrar en log de auditoría si hay justificación
+        if ($justificacion || $precioAnterior != $nuevoPrecio) {
+            $auditLog = new \app\models\AuditLog();
+            $auditLog->tabla_afectada = 'orden_servicio_detalle';
+            $auditLog->registro_id = $detalle->id;
+            $auditLog->accion = 'cambio_precio';
+            $auditLog->datos_antiguos = json_encode(['precio_unitario' => $precioAnterior]);
+            $auditLog->datos_nuevos = json_encode([
+                'precio_unitario' => $nuevoPrecio,
+                'justificacion' => $justificacion,
+            ]);
+            $auditLog->usuario_id = Yii::$app->user->id ?? null;
+            $auditLog->fecha = date('Y-m-d H:i:s');
+            $auditLog->ip = Yii::$app->request->userIP ?? null;
+            $auditLog->save(false);
+        }
+
+        // Recalcular total de la orden
+        $total = 0;
+        foreach ($model->detalles as $d) {
+            $total += $d->cantidad * $d->precio_unitario;
+        }
+        $model->total = $total;
+        $model->save(false);
+
+        return [
+            'success' => true,
+            'message' => 'Precio actualizado correctamente',
+            'precio_anterior' => $precioAnterior,
+            'precio_nuevo' => $nuevoPrecio,
+            'total_actualizado' => $total,
         ];
     }
 

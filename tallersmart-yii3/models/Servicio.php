@@ -21,11 +21,13 @@ class Servicio extends ActiveRecord
         return [
             [['nombre', 'precio'], 'required'],
             [['categoria_id'], 'integer'],
-            [['nombre', 'descripcion'], 'string', 'max' => 255],
-            [['precio'], 'number'],
+            [['nombre'], 'string', 'max' => 255],
+            [['descripcion'], 'string', 'max' => 500],
+            [['precio'], 'number', 'min' => 0],
             [['duracion_estimada'], 'integer', 'min' => 0],
             [['activo'], 'boolean'],
             [['created_at', 'updated_at'], 'safe'],
+            [['nombre'], 'unique', 'message' => 'El nombre del servicio ya existe'],
         ];
     }
 
