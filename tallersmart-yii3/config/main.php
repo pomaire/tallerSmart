@@ -49,6 +49,8 @@ return [
                 'application/json' => 'yii\web\JsonParser',
             ],
             'cookieValidationKey' => getenv('APP_KEY') ?: 'tallersmart-secret-key-change-in-production',
+            'enableCsrfCookie' => true,
+            'enableCsrfValidation' => true,
         ],
         
         'urlManager' => [
@@ -88,11 +90,24 @@ return [
             ],
         ],
         
+        'session' => [
+            'class' => 'yii\web\Session',
+            'cookieParams' => [
+                'httponly' => true, // HU-012: Cookies HttpOnly
+                'secure' => true,   // HU-012: Cookies Secure (solo HTTPS)
+                'samesite' => 'Strict',
+            ],
+            'timeout' => 1800, // 30 minutos
+            'useTransparentSessionID' => false,
+        ],
+        
         'user' => [
             'identityClass' => 'app\models\Usuario',
-            'enableAutoLogin' => false,
-            'enableSession' => false,
-            'loginUrl' => null,
+            'enableAutoLogin' => true,
+            'enableSession' => true,
+            'loginUrl' => ['site/login'],
+            'authTimeout' => 1800, // 30 minutos de inactividad (HU-004)
+            'absoluteAuthTimeout' => 3600 * 24, // Sesión máxima de 24 horas
         ],
     ],
     
