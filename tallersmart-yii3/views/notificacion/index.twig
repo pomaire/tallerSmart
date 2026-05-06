@@ -1,3 +1,345 @@
 {% extends "@app/views/layouts/main.twig" %}
-{% block title %}Notificacion - TallerSmart{% endblock %}
-{% block content %}<div class="p-6"><h1 class="text-2xl font-bold">Notificacion</h1><p>Vista en desarrollo</p></div>{% endblock %}
+{% block title %}Notificaciones - TallerSmart{% endblock %}
+{% block content %}
+<div class="notificaciones-page" x-data="notificacionesApp()">
+    <!-- Header con estadísticas -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                <i class="fas fa-bell text-blue-600"></i>
+                Centro de Notificaciones
+            </h1>
+            <button @click="marcarTodasLeidas()" class="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition">
+                <i class="fas fa-check-double mr-2"></i>Marcar todas como leídas
+            </button>
+        </div>
+        
+        <!-- Estadísticas rápidas -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-600" x-text="stats.total">0</div>
+                <div class="text-sm text-gray-600">Total</div>
+            </div>
+            <div class="bg-red-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-600" x-text="stats.noLeidas">0</div>
+                <div class="text-sm text-gray-600">No Leídas</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-600" x-text="stats.citas">0</div>
+                <div class="text-sm text-gray-600">Citas</div>
+            </div>
+            <div class="bg-orange-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-orange-600" x-text="stats.ordenes">0</div>
+                <div class="text-sm text-gray-600">Órdenes</div>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-600" x-text="stats.sistema">0</div>
+                <div class="text-sm text-gray-600">Sistema</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <select x-model="filtros.tipo" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Todos</option>
+                    <option value="cita">📅 Citas</option>
+                    <option value="orden">🔧 Órdenes</option>
+                    <option value="inventario">📦 Inventario</option>
+                    <option value="pago">💰 Pagos</option>
+                    <option value="sistema">⚙️ Sistema</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <select x-model="filtros.estado" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Todos</option>
+                    <option value="no_leida">No Leídas</option>
+                    <option value="leida">Leídas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                <select x-model="filtros.prioridad" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="">Todas</option>
+                    <option value="alta">🔴 Alta</option>
+                    <option value="media">🟡 Media</option>
+                    <option value="baja">🟢 Baja</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                <input type="text" x-model="filtros.busqueda" placeholder="Buscar en notificaciones..." class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Notificaciones -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="divide-y divide-gray-200">
+            <template x-if="notificacionesFiltradas.length === 0">
+                <div class="p-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-lg">No hay notificaciones para mostrar</p>
+                </div>
+            </template>
+            
+            <template x-for="notif in notificacionesFiltradas" :key="notif.id">
+                <div class="p-4 hover:bg-gray-50 transition flex items-start gap-4" :class="{'bg-blue-50': !notif.leida}">
+                    <!-- Icono por tipo -->
+                    <div class="flex-shrink-0">
+                        <span class="w-12 h-12 rounded-full flex items-center justify-center text-xl"
+                              :class="{
+                                  'bg-blue-100 text-blue-600': notif.tipo === 'cita',
+                                  'bg-orange-100 text-orange-600': notif.tipo === 'orden',
+                                  'bg-red-100 text-red-600': notif.tipo === 'inventario',
+                                  'bg-green-100 text-green-600': notif.tipo === 'pago',
+                                  'bg-purple-100 text-purple-600': notif.tipo === 'sistema'
+                              }">
+                            <i :class="{
+                                'fas fa-calendar': notif.tipo === 'cita',
+                                'fas fa-wrench': notif.tipo === 'orden',
+                                'fas fa-box': notif.tipo === 'inventario',
+                                'fas fa-money-bill': notif.tipo === 'pago',
+                                'fas fa-cog': notif.tipo === 'sistema'
+                            }"></i>
+                        </span>
+                    </div>
+                    
+                    <!-- Contenido -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900" x-text="notif.titulo"></h3>
+                                <p class="text-sm text-gray-600 mt-1" x-text="notif.mensaje"></p>
+                                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                    <span x-text="formatFecha(notif.fecha)"></span>
+                                    <span>•</span>
+                                    <span class="px-2 py-0.5 rounded-full"
+                                          :class="{
+                                              'bg-red-100 text-red-700': notif.prioridad === 'alta',
+                                              'bg-yellow-100 text-yellow-700': notif.prioridad === 'media',
+                                              'bg-green-100 text-green-700': notif.prioridad === 'baja'
+                                          }"
+                                          x-text="notif.prioridad"></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="marcarComoLeida(notif.id)" 
+                                        x-show="!notif.leida"
+                                        class="p-2 text-gray-400 hover:text-blue-600 transition"
+                                        title="Marcar como leída">
+                                    <i class="fas fa-circle-notch"></i>
+                                </button>
+                                <button @click="eliminar(notif.id)" 
+                                        class="p-2 text-gray-400 hover:text-red-600 transition"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Entidad relacionada -->
+                        <div x-show="notif.entidad_id" class="mt-2">
+                            <a :href="notif.url_relacionada" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-external-link-alt mr-1"></i>
+                                <span x-text="notif.entidad_tipo + ' #' + notif.entidad_id"></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Paginación -->
+        <div x-show="notificacionesFiltradas.length > 0" class="border-t border-gray-200 px-4 py-3 bg-gray-50">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Mostrando <span x-text="notificacionesFiltradas.length"></span> de <span x-text="stats.total"></span> notificaciones
+                </div>
+                <div class="flex gap-2">
+                    <button @click="pagina--" :disabled="pagina <= 1" class="px-3 py-1 border rounded disabled:opacity-50">Anterior</button>
+                    <span class="px-3 py-1" x-text="pagina"></span>
+                    <button @click="pagina++" class="px-3 py-1 border rounded">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configuración de Preferencias -->
+    <div x-show="modalPreferencias" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h3 class="text-xl font-bold mb-4">Preferencias de Notificación</h3>
+            <p class="text-sm text-gray-600 mb-4">Configura cómo deseas recibir las notificaciones</p>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 border rounded">
+                    <div>
+                        <div class="font-medium">Notificaciones en Plataforma</div>
+                        <div class="text-sm text-gray-600">Mostrar campanita en el header</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="preferencias.en_plataforma" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 border rounded">
+                    <div>
+                        <div class="font-medium">Notificaciones por Email</div>
+                        <div class="text-sm text-gray-600">Recibir resumen diario por correo</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="preferencias.email" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 border rounded">
+                    <div>
+                        <div class="font-medium">Notificaciones Push</div>
+                        <div class="text-sm text-gray-600">Alertas en tiempo real en el navegador</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="preferencias.push" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="modalPreferencias = false" class="px-4 py-2 border rounded hover:bg-gray-50">Cancelar</button>
+                <button @click="guardarPreferencias()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar Preferencias</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('notificacionesApp', () => ({
+        notificaciones: [],
+        filtros: {
+            tipo: '',
+            estado: '',
+            prioridad: '',
+            busqueda: ''
+        },
+        stats: {
+            total: 0,
+            noLeidas: 0,
+            citas: 0,
+            ordenes: 0,
+            sistema: 0
+        },
+        pagina: 1,
+        modalPreferencias: false,
+        preferencias: {
+            en_plataforma: true,
+            email: false,
+            push: true
+        },
+        
+        async init() {
+            await this.cargarNotificaciones();
+            await this.cargarPreferencias();
+            setInterval(() => this.cargarNotificaciones(), 30000);
+        },
+        
+        async cargarNotificaciones() {
+            try {
+                const response = await fetch('/api/notificacion?tipo=' + this.filtros.tipo + '&estado=' + this.filtros.estado);
+                const data = await response.json();
+                this.notificaciones = data.items || [];
+                this.stats = data.stats || this.stats;
+            } catch (error) {
+                console.error('Error cargando notificaciones:', error);
+            }
+        },
+        
+        get notificacionesFiltradas() {
+            let filtradas = this.notificaciones;
+            if (this.filtros.tipo) filtradas = filtradas.filter(n => n.tipo === this.filtros.tipo);
+            if (this.filtros.estado === 'no_leida') filtradas = filtradas.filter(n => !n.leida);
+            else if (this.filtros.estado === 'leida') filtradas = filtradas.filter(n => n.leida);
+            if (this.filtros.prioridad) filtradas = filtradas.filter(n => n.prioridad === this.filtros.prioridad);
+            if (this.filtros.busqueda) {
+                const busqueda = this.filtros.busqueda.toLowerCase();
+                filtradas = filtradas.filter(n => n.titulo.toLowerCase().includes(busqueda) || n.mensaje.toLowerCase().includes(busqueda));
+            }
+            return filtradas;
+        },
+        
+        formatFecha(fecha) {
+            const d = new Date(fecha);
+            const now = new Date();
+            const diff = now - d;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+            if (minutes < 1) return 'Ahora mismo';
+            if (minutes < 60) return `Hace ${minutes} min`;
+            if (hours < 24) return `Hace ${hours} hr${hours > 1 ? 's' : ''}`;
+            if (days < 7) return `Hace ${days} día${days > 1 ? 's' : ''}`;
+            return d.toLocaleDateString('es-CL');
+        },
+        
+        async marcarComoLeida(id) {
+            try {
+                await fetch(`/api/notificacion/${id}/leer`, { method: 'POST' });
+                await this.cargarNotificaciones();
+            } catch (error) {
+                console.error('Error marcando como leída:', error);
+            }
+        },
+        
+        async marcarTodasLeidas() {
+            if (!confirm('¿Marcar todas como leídas?')) return;
+            try {
+                await fetch('/api/notificacion/marcar-todas-leidas', { method: 'POST' });
+                await this.cargarNotificaciones();
+            } catch (error) {
+                console.error('Error marcando todas:', error);
+            }
+        },
+        
+        async eliminar(id) {
+            if (!confirm('¿Eliminar esta notificación?')) return;
+            try {
+                await fetch(`/api/notificacion/${id}`, { method: 'DELETE' });
+                await this.cargarNotificaciones();
+            } catch (error) {
+                console.error('Error eliminando:', error);
+            }
+        },
+        
+        async cargarPreferencias() {
+            try {
+                const response = await fetch('/api/notificacion/preferencias');
+                const data = await response.json();
+                this.preferencias = data || this.preferencias;
+            } catch (error) {
+                console.error('Error cargando preferencias:', error);
+            }
+        },
+        
+        async guardarPreferencias() {
+            try {
+                await fetch('/api/notificacion/preferencias', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.preferencias)
+                });
+                this.modalPreferencias = false;
+                alert('Preferencias guardadas correctamente');
+            } catch (error) {
+                console.error('Error guardando preferencias:', error);
+            }
+        }
+    }));
+});
+</script>
+{% endblock %}
