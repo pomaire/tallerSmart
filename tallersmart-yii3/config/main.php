@@ -77,7 +77,25 @@ return [
                 
                 // Órdenes de servicio - acciones especiales
                 'POST api/ordenes-servicio/<id>/finalizar' => 'api/ordenes-servicio/finalizar',
-                
+
+                // Técnicos - acciones especiales
+                'GET api/tecnicos/carga-trabajo' => 'api/tecnico/carga-trabajo',
+                'GET api/tecnicos/ranking' => 'api/tecnico/ranking',
+                'GET api/tecnicos/exportar' => 'api/tecnico/exportar',
+                'GET api/tecnicos/auditoria' => 'api/tecnico/auditoria',
+                'GET api/tecnicos/solicitudes-dia-libre' => 'api/tecnico/solicitudes-dia-libre',
+                'POST api/tecnicos/solicitudes-dia-libre' => 'api/tecnico/solicitudes-dia-libre',
+                'POST api/tecnicos/transferir-orden' => 'api/tecnico/transferir-orden',
+                'GET api/tecnicos/<id>/ordenes-asignadas' => 'api/tecnico/ordenes-asignadas',
+                'GET api/tecnicos/<id>/historial' => 'api/tecnico/historial',
+                'GET api/tecnicos/<id>/productividad' => 'api/tecnico/productividad',
+                'POST api/tecnicos/<id>/asignar-orden' => 'api/tecnico/asignar-orden',
+                'POST api/tecnicos/<id>/desasignar-orden' => 'api/tecnico/desasignar-orden',
+                'GET api/tecnicos/<id>/disponibilidad' => 'api/tecnico/disponibilidad',
+                'GET api/tecnicos/<id>/horas-trabajadas' => 'api/tecnico/horas-trabajadas',
+                'GET api/tecnicos/<id>/calificacion' => 'api/tecnico/calificacion',
+                'GET api/tecnicos/<id>/horarios' => 'api/tecnico/horarios',
+
                 // Citas - acciones especiales
                 'POST api/citas/<id>/cancel' => 'api/citas/cancel',
                 
