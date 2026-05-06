@@ -2,47 +2,31 @@
 
 declare(strict_types=1);
 
-namespace App\Model;
+namespace app\models;
 
-use Yiisoft\ActiveRecord\ActiveRecord;
+use yii\db\ActiveRecord;
 
 /**
- * Modelo ActiveRecord para la tabla cliente
+ * Modelo para la tabla Cliente
  */
-final class Cliente extends ActiveRecord
+class Cliente extends ActiveRecord
 {
-    public function getTableName(): string
+    public static function tableName(): string
     {
         return 'cliente';
-    }
-
-    public function getVehiculos(): array
-    {
-        return $this->hasMany(Vehiculo::class, ['clienteId' => 'id']);
-    }
-
-    public function getCitas(): array
-    {
-        return $this->hasMany(Cita::class, ['clienteId' => 'id']);
-    }
-
-    public function getOrdenesServicio(): array
-    {
-        return $this->hasMany(OrdenServicio::class, ['clienteId' => 'id']);
     }
 
     public function rules(): array
     {
         return [
-            [['nombre', 'telefono'], 'required'],
+            [['nombre', 'documento'], 'required'],
+            [['tipo_documento'], 'string', 'max' => 50],
+            [['documento'], 'string', 'max' => 20],
             [['email'], 'email'],
-            [['nombre'], 'string', 'max' => 200],
-            [['email'], 'string', 'max' => 255],
-            [['telefono'], 'string', 'max' => 20],
-            [['documento'], 'string', 'max' => 50],
-            [['direccion', 'notas'], 'string'],
-            [['ciudad', 'pais'], 'string', 'max' => 100],
+            [['email', 'telefono', 'direccion', 'ciudad'], 'string', 'max' => 100],
+            [['notas'], 'string'],
             [['activo'], 'boolean'],
+            [['created_at', 'updated_at'], 'safe'],
         ];
     }
 
@@ -51,13 +35,31 @@ final class Cliente extends ActiveRecord
         return [
             'id' => 'ID',
             'nombre' => 'Nombre',
+            'tipo_documento' => 'Tipo Documento',
+            'documento' => 'Documento',
             'email' => 'Email',
             'telefono' => 'Teléfono',
-            'documento' => 'Documento',
             'direccion' => 'Dirección',
             'ciudad' => 'Ciudad',
-            'pais' => 'País',
+            'notas' => 'Notas',
             'activo' => 'Activo',
+            'created_at' => 'Creado en',
+            'updated_at' => 'Actualizado en',
         ];
+    }
+
+    public function getVehiculos(): \yii\db\ActiveQuery
+    {
+        return $this->hasMany(Vehiculo::class, ['cliente_id' => 'id']);
+    }
+
+    public function getCitas(): \yii\db\ActiveQuery
+    {
+        return $this->hasMany(Cita::class, ['cliente_id' => 'id']);
+    }
+
+    public function getOrdenesServicio(): \yii\db\ActiveQuery
+    {
+        return $this->hasMany(OrdenServicio::class, ['cliente_id' => 'id']);
     }
 }
