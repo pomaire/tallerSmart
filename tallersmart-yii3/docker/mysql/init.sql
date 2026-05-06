@@ -432,3 +432,18 @@ INSERT INTO parametro_sistema (clave, valor, tipo, descripcion, categoria) VALUE
 ('inventario.alerta_stock_minimo', 'true', 'boolean', 'Alertar cuando stock sea mínimo', 'inventario'),
 ('citas.duracion_por_defecto', '60', 'number', 'Duración predeterminada en minutos', 'citas'),
 ('ordenes.folio_prefijo', 'OS-', 'string', 'Prefijo para folios de orden', 'ordenes');
+
+-- Tabla para historial de cambios de estado (HU-020)
+CREATE TABLE IF NOT EXISTS orden_servicio_historial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    orden_servicio_id INT NOT NULL,
+    estado_anterior VARCHAR(50) NOT NULL,
+    estado_nuevo VARCHAR(50) NOT NULL,
+    usuario_id INT,
+    fecha_cambio DATETIME DEFAULT CURRENT_TIMESTAMP,
+    comentarios TEXT,
+    FOREIGN KEY (orden_servicio_id) REFERENCES orden_servicio(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE SET NULL,
+    INDEX idx_orden_servicio (orden_servicio_id),
+    INDEX idx_fecha_cambio (fecha_cambio)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

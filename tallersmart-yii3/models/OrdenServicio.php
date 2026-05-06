@@ -12,6 +12,24 @@ use yii\db\Expression;
  */
 class OrdenServicio extends ActiveRecord
 {
+    // Estados posibles
+    const ESTADO_ABIERTO = 'abierto';
+    const ESTADO_EN_PROGRESO = 'en_progreso';
+    const ESTADO_ESPERANDO_REPUESTOS = 'esperando_repuestos';
+    const ESTADO_LISTO_PARA_ENTREGA = 'listo_para_entrega';
+    const ESTADO_ENTREGADA = 'entregada';
+    const ESTADO_CANCELADA = 'cancelada';
+
+    // Transiciones válidas de estado
+    const TRANSICIONES_VALIDAS = [
+        self::ESTADO_ABIERTO => [self::ESTADO_EN_PROGRESO, self::ESTADO_ESPERANDO_REPUESTOS, self::ESTADO_CANCELADA],
+        self::ESTADO_EN_PROGRESO => [self::ESTADO_ESPERANDO_REPUESTOS, self::ESTADO_LISTO_PARA_ENTREGA],
+        self::ESTADO_ESPERANDO_REPUESTOS => [self::ESTADO_EN_PROGRESO, self::ESTADO_CANCELADA],
+        self::ESTADO_LISTO_PARA_ENTREGA => [self::ESTADO_ENTREGADA],
+        self::ESTADO_ENTREGADA => [],
+        self::ESTADO_CANCELADA => [self::ESTADO_ABIERTO], // Solo reopen
+    ];
+
     public static function tableName(): string
     {
         return 'orden_servicio';
@@ -151,5 +169,150 @@ class OrdenServicio extends ActiveRecord
             return true;
         }
         return false;
+    }
+
+    /**
+     * Verifica si una transición de estado es válida (HU-008)
+     * @param string $nuevoEstado
+     * @return bool
+     */
+    public function canTransitionTo(string $nuevoEstado): bool
+    {
+        $estadoActual = $this->estado ?? self::ESTADO_ABIERTO;
+        
+        if (!isset(self::TRANSICIONES_VALIDAS[$estadoActual])) {
+            return false;
+        }
+        
+        return in_array($nuevoEstado, self::TRANSICIONES_VALIDAS[$estadoActual]);
+    }
+
+    /**
+     * Obtiene el mensaje de error para una transición inválida (HU-008)
+     * @param string $nuevoEstado
+     * @return string
+     */
+    public function getTransitionErrorMessage(string $nuevoEstado): string
+    {
+        $estadoActual = $this->estado ?? self::ESTADO_ABIERTO;
+        $transicionesPermitidas = self::TRANSICIONES_VALIDAS[$estadoActual] ?? [];
+        
+        if (empty($transicionesPermitidas)) {
+            return "La orden en estado '{$estadoActual}' no puede cambiar a ningún otro estado.";
+        }
+        
+        $estadosPermitidos = implode(', ', $transicionesPermitidas);
+        return "Transición inválida: de '{$estadoActual}' solo se puede cambiar a: {$estadosPermitidos}";
+    }
+
+    /**
+     * Valida que el vehículo pertenezca al cliente (HU-019)
+     * @return bool
+     */
+    public function validarVehiculoCliente(): bool
+    {
+        if (!$this->vehiculo_id || !$this->cliente_id) {
+            return false;
+        }
+        
+        $vehiculo = Vehiculo::findOne($this->vehiculo_id);
+        if (!$vehiculo) {
+            return false;
+        }
+        
+        return $vehiculo->cliente_id === $this->cliente_id;
+    }
+
+    /**
+     * Registra un cambio de estado en el historial (HU-020)
+     * @param string $estadoAnterior
+     * @param string $estadoNuevo
+     * @param int|null $usuarioId
+     * @return bool
+     */
+    public function registrarCambioEstado(string $estadoAnterior, string $estadoNuevo, ?int $usuarioId = null): bool
+    {
+        $historial = new OrdenServicioHistorial();
+        $historial->orden_servicio_id = $this->id;
+        $historial->estado_anterior = $estadoAnterior;
+        $historial->estado_nuevo = $estadoNuevo;
+        $historial->usuario_id = $usuarioId;
+        $historial->fecha_cambio = new Expression('NOW()');
+        
+        return $historial->save(false);
+    }
+
+    /**
+     * Obtiene el historial de cambios de estado (HU-020)
+     * @return \yii\db\ActiveQuery
+     */
+    public function getHistorialEstados(): \yii\db\ActiveQuery
+    {
+        return $this->hasMany(OrdenServicioHistorial::class, ['orden_servicio_id' => 'id'])
+            ->orderBy(['fecha_cambio' => SORT_ASC]);
+    }
+
+    /**
+     * Calcula el KPI de trabajos activos (HU-010)
+     * open + in_progress + waiting_parts
+     * @return int
+     */
+    public static function getTrabajosActivosCount(): int
+    {
+        return self::find()
+            ->where(['estado' => [
+                self::ESTADO_ABIERTO,
+                self::ESTADO_EN_PROGRESO,
+                self::ESTADO_ESPERANDO_REPUESTOS
+            ]])
+            ->count();
+    }
+
+    /**
+     * Verifica si la orden está abierta
+     */
+    public function getEstaAbierta(): bool
+    {
+        return $this->estado === self::ESTADO_ABIERTO;
+    }
+
+    /**
+     * Verifica si la orden está en progreso
+     */
+    public function getEstaEnProgreso(): bool
+    {
+        return $this->estado === self::ESTADO_EN_PROGRESO;
+    }
+
+    /**
+     * Verifica si la orden está esperando repuestos
+     */
+    public function getEstaEsperandoRepuestos(): bool
+    {
+        return $this->estado === self::ESTADO_ESPERANDO_REPUESTOS;
+    }
+
+    /**
+     * Verifica si la orden está lista para entrega
+     */
+    public function getEstaListaParaEntrega(): bool
+    {
+        return $this->estado === self::ESTADO_LISTO_PARA_ENTREGA;
+    }
+
+    /**
+     * Verifica si la orden está entregada
+     */
+    public function getEstaEntregada(): bool
+    {
+        return $this->estado === self::ESTADO_ENTREGADA;
+    }
+
+    /**
+     * Verifica si la orden está cancelada
+     */
+    public function getEstaCancelada(): bool
+    {
+        return $this->estado === self::ESTADO_CANCELADA;
     }
 }

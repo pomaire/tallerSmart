@@ -49,10 +49,8 @@ class DashboardController extends BaseController
             ->where(['estado' => 'pendiente'])
             ->count();
 
-        // Órdenes en progreso
-        $ordenesProgreso = \app\models\OrdenServicio::find()
-            ->where(['estado' => 'en_progreso'])
-            ->count();
+        // Órdenes en progreso (HU-010: open + in_progress + waiting_parts)
+        $trabajosActivos = \app\models\OrdenServicio::getTrabajosActivosCount();
 
         // Ingresos del mes
         $inicioMes = date('Y-m-01');
@@ -76,7 +74,7 @@ class DashboardController extends BaseController
                 'total_vehiculos' => (int)$totalVehiculos,
                 'citas_hoy' => (int)$citasHoy,
                 'citas_pendientes' => (int)$citasPendientes,
-                'ordenes_en_progreso' => (int)$ordenesProgreso,
+                'trabajos_activos' => (int)$trabajosActivos,
                 'ingresos_mes' => (float)$ingresosMes,
                 'items_stock_bajo' => (int)$stockBajo,
             ],
@@ -358,6 +356,83 @@ class DashboardController extends BaseController
             'metadata' => [
                 'total_notificaciones' => count($notificaciones),
                 'no_leidas' => count($notificaciones),
+            ],
+        ];
+    }
+
+    /**
+     * Reporte de servicios por técnico (HU-027)
+     * GET /api/dashboard/reporte-tecnicos
+     */
+    public function actionReporteTecnicos(): array
+    {
+        $request = Yii::$app->request;
+        $fechaDesde = $request->get('fecha_desde');
+        $fechaHasta = $request->get('fecha_hasta');
+
+        // Query para obtener estadísticas por técnico
+        $query = (new \yii\db\Query())
+            ->select([
+                'tecnico.id as tecnico_id',
+                'tecnico.nombre as tecnico_nombre',
+                'tecnico.apellido as tecnico_apellido',
+                'COUNT(DISTINCT orden_servicio.id) as ordenes_atendidas',
+                'SUM(CASE WHEN orden_servicio.estado = "entregada" THEN 1 ELSE 0 END) as ordenes_completadas',
+                'SUM(CASE WHEN orden_servicio.estado IN ("abierto", "en_progreso", "esperando_repuestos", "listo_para_entrega") THEN 1 ELSE 0 END) as ordenes_activas',
+            ])
+            ->from('tecnico')
+            ->leftJoin('orden_servicio', 'orden_servicio.tecnico_id = tecnico.id')
+            ->groupBy(['tecnico.id', 'tecnico.nombre', 'tecnico.apellido'])
+            ->orderBy(['ordenes_atendidas' => SORT_DESC]);
+
+        // Aplicar filtros de fecha si existen
+        if ($fechaDesde) {
+            $query->andWhere(['>=', 'orden_servicio.created_at', $fechaDesde]);
+        }
+        if ($fechaHasta) {
+            $query->andWhere(['<=', 'orden_servicio.created_at', $fechaHasta]);
+        }
+
+        $resultados = $query->all();
+
+        // Formatear datos para respuesta
+        $data = [];
+        foreach ($resultados as $row) {
+            // Calcular horas estimadas basadas en los servicios de las órdenes
+            $horasEstimadas = 0;
+            if ($row['ordenes_atendidas'] > 0) {
+                $ordenesIds = \app\models\OrdenServicio::find()
+                    ->select(['id'])
+                    ->where(['tecnico_id' => $row['tecnico_id']])
+                    ->column();
+                
+                if (!empty($ordenesIds)) {
+                    $duracionTotal = \app\models\OrdenServicioDetalle::find()
+                        ->joinWith(['servicio'])
+                        ->where(['in', 'orden_servicio_detalle.orden_servicio_id', $ordenesIds])
+                        ->sum('servicio.duracion_estimada');
+                    
+                    $horasEstimadas = $duracionTotal ? round($duracionTotal / 60, 2) : 0;
+                }
+            }
+
+            $data[] = [
+                'tecnico_id' => (int)$row['tecnico_id'],
+                'nombre_completo' => trim($row['tecnico_nombre'] . ' ' . $row['tecnico_apellido']),
+                'ordenes_atendidas' => (int)$row['ordenes_atendidas'],
+                'ordenes_completadas' => (int)$row['ordenes_completadas'],
+                'ordenes_activas' => (int)$row['ordenes_activas'],
+                'horas_estimadas' => $horasEstimadas,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $data,
+            'metadata' => [
+                'fecha_desde' => $fechaDesde,
+                'fecha_hasta' => $fechaHasta,
+                'total_tecnicos' => count($data),
             ],
         ];
     }
