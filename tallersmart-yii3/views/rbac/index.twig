@@ -1,0 +1,690 @@
+{# views/rbac/index.twig #}
+{% extends '@app/views/layouts/main.twig' %}
+
+{% block title %}Gestión de Accesos (RBAC){% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Gestión de Accesos (RBAC)</h1>
+    <p>Administra roles, permisos y usuarios del sistema</p>
+</div>
+
+<div class="rbac-container">
+    <!-- Pestañas de navegación -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="roles">Roles</button>
+        <button class="tab-btn" data-tab="permisos">Permisos</button>
+        <button class="tab-btn" data-tab="usuarios">Usuarios</button>
+    </div>
+
+    <!-- Contenido: Roles -->
+    <div id="tab-roles" class="tab-content active">
+        <div class="toolbar">
+            <button class="btn btn-primary" @click="abrirModalRol()">
+                <i class="fas fa-plus"></i> Nuevo Rol
+            </button>
+            <input type="text" class="search-input" placeholder="Buscar rol..." x-model="busquedaRol">
+        </div>
+        
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="rol in rolesFiltrados" :key="rol.id">
+                        <tr>
+                            <td x-text="rol.id"></td>
+                            <td x-text="rol.nombre"></td>
+                            <td x-text="rol.descripcion"></td>
+                            <td>
+                                <span class="badge" :class="rol.activo ? 'badge-success' : 'badge-danger'" 
+                                      x-text="rol.activo ? 'Activo' : 'Inactivo'"></span>
+                            </td>
+                            <td>
+                                <button class="btn-icon" @click="editarRol(rol)" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" @click="asignarPermisos(rol)" title="Asignar Permisos">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                <button class="btn-icon btn-danger" @click="eliminarRol(rol.id)" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Contenido: Permisos -->
+    <div id="tab-permisos" class="tab-content">
+        <div class="toolbar">
+            <button class="btn btn-primary" @click="abrirModalPermiso()">
+                <i class="fas fa-plus"></i> Nuevo Permiso
+            </button>
+            <input type="text" class="search-input" placeholder="Buscar permiso..." x-model="busquedaPermiso">
+        </div>
+        
+        <div class="permissions-grid">
+            <template x-for="permiso in permisosFiltrados" :key="permiso.id">
+                <div class="permission-card">
+                    <div class="card-header">
+                        <h4 x-text="permiso.nombre"></h4>
+                        <span class="badge" :class="permiso.activo ? 'badge-success' : 'badge-danger'">
+                            <span x-text="permiso.activo ? 'Activo' : 'Inactivo'"></span>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p x-text="permiso.descripcion"></p>
+                        <small><strong>Módulo:</strong> <span x-text="permiso.modulo"></span></small>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-sm" @click="editarPermiso(permiso)">Editar</button>
+                        <button class="btn-sm btn-danger" @click="eliminarPermiso(permiso.id)">Eliminar</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Contenido: Usuarios -->
+    <div id="tab-usuarios" class="tab-content">
+        <div class="toolbar">
+            <button class="btn btn-primary" @click="abrirModalUsuario()">
+                <i class="fas fa-user-plus"></i> Nuevo Usuario
+            </button>
+            <input type="text" class="search-input" placeholder="Buscar usuario..." x-model="busquedaUsuario">
+            <select class="filter-select" x-model="filtroRol">
+                <option value="">Todos los roles</option>
+                <template x-for="rol in roles" :key="rol.id">
+                    <option :value="rol.id" x-text="rol.nombre"></option>
+                </template>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th>Nombre Completo</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Último Acceso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="usuario in usuariosFiltrados" :key="usuario.id">
+                        <tr>
+                            <td x-text="usuario.id"></td>
+                            <td x-text="usuario.username"></td>
+                            <td x-text="usuario.nombre_completo"></td>
+                            <td x-text="usuario.email"></td>
+                            <td>
+                                <span class="badge badge-info" x-text="usuario.rol_nombre"></span>
+                            </td>
+                            <td>
+                                <span class="badge" :class="usuario.activo ? 'badge-success' : 'badge-danger'" 
+                                      x-text="usuario.activo ? 'Activo' : 'Inactivo'"></span>
+                            </td>
+                            <td x-text="formatearFecha(usuario.ultimo_acceso)"></td>
+                            <td>
+                                <button class="btn-icon" @click="editarUsuario(usuario)" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" @click="resetearPassword(usuario.id)" title="Reset Password">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                <button class="btn-icon btn-danger" @click="eliminarUsuario(usuario.id)" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Rol -->
+<div x-show="modalRolAbierto" class="modal-overlay" style="display: none;" @click.self="cerrarModalRol()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 x-text="edicionRol ? 'Editar Rol' : 'Nuevo Rol'"></h3>
+            <button class="close-btn" @click="cerrarModalRol()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form @submit.prevent="guardarRol()">
+                <div class="form-group">
+                    <label>Nombre del Rol *</label>
+                    <input type="text" class="form-control" x-model="formularioRol.nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea class="form-control" x-model="formularioRol.descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select class="form-control" x-model="formularioRol.activo">
+                        <option :value="1">Activo</option>
+                        <option :value="0">Inactivo</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalRol()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Permiso -->
+<div x-show="modalPermisoAbierto" class="modal-overlay" style="display: none;" @click.self="cerrarModalPermiso()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 x-text="edicionPermiso ? 'Editar Permiso' : 'Nuevo Permiso'"></h3>
+            <button class="close-btn" @click="cerrarModalPermiso()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form @submit.prevent="guardarPermiso()">
+                <div class="form-group">
+                    <label>Nombre del Permiso *</label>
+                    <input type="text" class="form-control" x-model="formularioPermiso.nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Módulo *</label>
+                    <select class="form-control" x-model="formularioPermiso.modulo" required>
+                        <option value="">Seleccionar módulo</option>
+                        <option value="rbac">RBAC</option>
+                        <option value="categorias">Categorías</option>
+                        <option value="servicios">Servicios</option>
+                        <option value="clientes">Clientes</option>
+                        <option value="vehiculos">Vehículos</option>
+                        <option value="inventario">Inventario</option>
+                        <option value="tecnicos">Técnicos</option>
+                        <option value="citas">Citas</option>
+                        <option value="ordenes">Órdenes de Servicio</option>
+                        <option value="pagos">Pagos</option>
+                        <option value="notificaciones">Notificaciones</option>
+                        <option value="auditlog">Audit Log</option>
+                        <option value="dashboard">Dashboard</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea class="form-control" x-model="formularioPermiso.descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select class="form-control" x-model="formularioPermiso.activo">
+                        <option :value="1">Activo</option>
+                        <option :value="0">Inactivo</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalPermiso()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Usuario -->
+<div x-show="modalUsuarioAbierto" class="modal-overlay" style="display: none;" @click.self="cerrarModalUsuario()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 x-text="edicionUsuario ? 'Editar Usuario' : 'Nuevo Usuario'"></h3>
+            <button class="close-btn" @click="cerrarModalUsuario()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form @submit.prevent="guardarUsuario()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre de Usuario *</label>
+                        <input type="text" class="form-control" x-model="formularioUsuario.username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Completo *</label>
+                        <input type="text" class="form-control" x-model="formularioUsuario.nombre_completo" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" class="form-control" x-model="formularioUsuario.email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" class="form-control" x-model="formularioUsuario.telefono">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rol *</label>
+                        <select class="form-control" x-model="formularioUsuario.rol_id" required>
+                            <option value="">Seleccionar rol</option>
+                            <template x-for="rol in roles" :key="rol.id">
+                                <option :value="rol.id" x-text="rol.nombre"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="form-group" x-show="!edicionUsuario">
+                        <label>Contraseña *</label>
+                        <input type="password" class="form-control" x-model="formularioUsuario.password" 
+                               :required="!edicionUsuario">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select class="form-control" x-model="formularioUsuario.activo">
+                        <option :value="1">Activo</option>
+                        <option :value="0">Inactivo</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalUsuario()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Asignar Permisos a Rol -->
+<div x-show="modalAsignarPermisosAbierto" class="modal-overlay modal-large" style="display: none;" @click.self="cerrarModalAsignarPermisos()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Asignar Permisos a: <span x-text="rolSeleccionado?.nombre"></span></h3>
+            <button class="close-btn" @click="cerrarModalAsignarPermisos()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="permissions-tree">
+                <template x-for="(grupo, modulo) in permisosAgrupados" :key="modulo">
+                    <div class="permission-group">
+                        <h4 x-text="modulo.toUpperCase()"></h4>
+                        <div class="permission-list">
+                            <template x-for="permiso in grupo" :key="permiso.id">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" :value="permiso.id" x-model="permisosSeleccionados">
+                                    <span x-text="permiso.nombre"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="cerrarModalAsignarPermisos()">Cancelar</button>
+            <button type="button" class="btn btn-primary" @click="guardarAsignacionPermisos()">Guardar Asignación</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('rbacManager', () => ({
+        // Estado
+        busquedaRol: '',
+        busquedaPermiso: '',
+        busquedaUsuario: '',
+        filtroRol: '',
+        
+        modalRolAbierto: false,
+        modalPermisoAbierto: false,
+        modalUsuarioAbierto: false,
+        modalAsignarPermisosAbierto: false,
+        
+        edicionRol: false,
+        edicionPermiso: false,
+        edicionUsuario: false,
+        
+        rolSeleccionado: null,
+        permisosSeleccionados: [],
+        
+        // Datos
+        roles: [],
+        permisos: [],
+        usuarios: [],
+        
+        // Formularios
+        formularioRol: { id: null, nombre: '', descripcion: '', activo: 1 },
+        formularioPermiso: { id: null, nombre: '', modulo: '', descripcion: '', activo: 1 },
+        formularioUsuario: { id: null, username: '', nombre_completo: '', email: '', telefono: '', rol_id: '', password: '', activo: 1 },
+        
+        init() {
+            this.cargarDatos();
+            this.setupTabs();
+        },
+        
+        setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    e.target.classList.add('active');
+                    const tabId = e.target.dataset.tab;
+                    document.getElementById(`tab-${tabId}`).classList.add('active');
+                });
+            });
+        },
+        
+        async cargarDatos() {
+            try {
+                const [rolesRes, permisosRes, usuariosRes] = await Promise.all([
+                    fetch('/api/rol/index'),
+                    fetch('/api/permiso/index'),
+                    fetch('/api/usuario/index')
+                ]);
+                
+                this.roles = await rolesRes.json();
+                this.permisos = await permisosRes.json();
+                this.usuarios = await usuariosRes.json();
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                alert('Error al cargar los datos');
+            }
+        },
+        
+        // Computed properties simuladas
+        get rolesFiltrados() {
+            if (!this.busquedaRol) return this.roles;
+            const term = this.busquedaRol.toLowerCase();
+            return this.roles.filter(r => 
+                r.nombre.toLowerCase().includes(term) || 
+                (r.descripcion && r.descripcion.toLowerCase().includes(term))
+            );
+        },
+        
+        get permisosFiltrados() {
+            if (!this.busquedaPermiso) return this.permisos;
+            const term = this.busquedaPermiso.toLowerCase();
+            return this.permisos.filter(p => 
+                p.nombre.toLowerCase().includes(term) || 
+                (p.descripcion && p.descripcion.toLowerCase().includes(term))
+            );
+        },
+        
+        get usuariosFiltrados() {
+            let result = this.usuarios;
+            
+            if (this.busquedaUsuario) {
+                const term = this.busquedaUsuario.toLowerCase();
+                result = result.filter(u => 
+                    u.username.toLowerCase().includes(term) || 
+                    u.nombre_completo.toLowerCase().includes(term) ||
+                    u.email.toLowerCase().includes(term)
+                );
+            }
+            
+            if (this.filtroRol) {
+                result = result.filter(u => u.rol_id == this.filtroRol);
+            }
+            
+            return result;
+        },
+        
+        get permisosAgrupados() {
+            const agrupados = {};
+            this.permisos.forEach(p => {
+                if (!agrupados[p.modulo]) {
+                    agrupados[p.modulo] = [];
+                }
+                agrupados[p.modulo].push(p);
+            });
+            return agrupados;
+        },
+        
+        // Acciones: Roles
+        abrirModalRol() {
+            this.edicionRol = false;
+            this.formularioRol = { id: null, nombre: '', descripcion: '', activo: 1 };
+            this.modalRolAbierto = true;
+        },
+        
+        cerrarModalRol() {
+            this.modalRolAbierto = false;
+        },
+        
+        editarRol(rol) {
+            this.edicionRol = true;
+            this.formularioRol = { ...rol };
+            this.modalRolAbierto = true;
+        },
+        
+        async guardarRol() {
+            try {
+                const url = this.edicionRol ? `/api/rol/update?id=${this.formularioRol.id}` : '/api/rol/create';
+                const method = this.edicionRol ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.formularioRol)
+                });
+                
+                if (res.ok) {
+                    this.cargarDatos();
+                    this.cerrarModalRol();
+                    alert(this.edicionRol ? 'Rol actualizado' : 'Rol creado');
+                } else {
+                    alert('Error al guardar el rol');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error de conexión');
+            }
+        },
+        
+        async eliminarRol(id) {
+            if (!confirm('¿Está seguro de eliminar este rol?')) return;
+            
+            try {
+                const res = await fetch(`/api/rol/delete?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    this.cargarDatos();
+                    alert('Rol eliminado');
+                } else {
+                    alert('Error al eliminar');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        // Acciones: Permisos
+        abrirModalPermiso() {
+            this.edicionPermiso = false;
+            this.formularioPermiso = { id: null, nombre: '', modulo: '', descripcion: '', activo: 1 };
+            this.modalPermisoAbierto = true;
+        },
+        
+        cerrarModalPermiso() {
+            this.modalPermisoAbierto = false;
+        },
+        
+        editarPermiso(permiso) {
+            this.edicionPermiso = true;
+            this.formularioPermiso = { ...permiso };
+            this.modalPermisoAbierto = true;
+        },
+        
+        async guardarPermiso() {
+            try {
+                const url = this.edicionPermiso ? `/api/permiso/update?id=${this.formularioPermiso.id}` : '/api/permiso/create';
+                const method = this.edicionPermiso ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.formularioPermiso)
+                });
+                
+                if (res.ok) {
+                    this.cargarDatos();
+                    this.cerrarModalPermiso();
+                    alert(this.edicionPermiso ? 'Permiso actualizado' : 'Permiso creado');
+                } else {
+                    alert('Error al guardar el permiso');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        async eliminarPermiso(id) {
+            if (!confirm('¿Está seguro de eliminar este permiso?')) return;
+            
+            try {
+                const res = await fetch(`/api/permiso/delete?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    this.cargarDatos();
+                    alert('Permiso eliminado');
+                } else {
+                    alert('Error al eliminar');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        // Acciones: Usuarios
+        abrirModalUsuario() {
+            this.edicionUsuario = false;
+            this.formularioUsuario = { id: null, username: '', nombre_completo: '', email: '', telefono: '', rol_id: '', password: '', activo: 1 };
+            this.modalUsuarioAbierto = true;
+        },
+        
+        cerrarModalUsuario() {
+            this.modalUsuarioAbierto = false;
+        },
+        
+        editarUsuario(usuario) {
+            this.edicionUsuario = true;
+            this.formularioUsuario = { ...usuario, password: '' };
+            this.modalUsuarioAbierto = true;
+        },
+        
+        async guardarUsuario() {
+            try {
+                const url = this.edicionUsuario ? `/api/usuario/update?id=${this.formularioUsuario.id}` : '/api/usuario/create';
+                const method = this.edicionUsuario ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.formularioUsuario)
+                });
+                
+                if (res.ok) {
+                    this.cargarDatos();
+                    this.cerrarModalUsuario();
+                    alert(this.edicionUsuario ? 'Usuario actualizado' : 'Usuario creado');
+                } else {
+                    const data = await res.json();
+                    alert(data.message || 'Error al guardar el usuario');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        async eliminarUsuario(id) {
+            if (!confirm('¿Está seguro de eliminar este usuario?')) return;
+            
+            try {
+                const res = await fetch(`/api/usuario/delete?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    this.cargarDatos();
+                    alert('Usuario eliminado');
+                } else {
+                    alert('Error al eliminar');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        async resetearPassword(id) {
+            if (!confirm('¿Está seguro de resetear la contraseña de este usuario?')) return;
+            
+            const nuevaPassword = prompt('Ingrese la nueva contraseña:');
+            if (!nuevaPassword) return;
+            
+            try {
+                const res = await fetch(`/api/usuario/reset-password?id=${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: nuevaPassword })
+                });
+                
+                if (res.ok) {
+                    alert('Contraseña reseteada exitosamente');
+                } else {
+                    alert('Error al resetear contraseña');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        // Acciones: Asignar Permisos
+        asignarPermisos(rol) {
+            this.rolSeleccionado = rol;
+            this.permisosSeleccionados = rol.permisos_asignados || [];
+            this.modalAsignarPermisosAbierto = true;
+        },
+        
+        cerrarModalAsignarPermisos() {
+            this.modalAsignarPermisosAbierto = false;
+            this.rolSeleccionado = null;
+            this.permisosSeleccionados = [];
+        },
+        
+        async guardarAsignacionPermisos() {
+            if (!this.rolSeleccionado) return;
+            
+            try {
+                const res = await fetch(`/api/rol/asignar-permisos?id=${this.rolSeleccionado.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permisos_ids: this.permisosSeleccionados })
+                });
+                
+                if (res.ok) {
+                    this.cerrarModalAsignarPermisos();
+                    alert('Permisos asignados correctamente');
+                } else {
+                    alert('Error al asignar permisos');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        formatearFecha(fecha) {
+            if (!fecha) return 'Nunca';
+            return new Date(fecha).toLocaleString('es-ES');
+        }
+    }));
+});
+</script>
+{% endblock %}
