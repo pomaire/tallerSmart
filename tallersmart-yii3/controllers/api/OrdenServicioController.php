@@ -6,6 +6,7 @@ namespace app\controllers\api;
 
 use app\models\OrdenServicio;
 use app\models\OrdenServicioDetalle;
+use app\models\Servicio;
 use yii\data\ActiveDataProvider;
 use yii\web\NotFoundHttpException;
 use yii\web\BadRequestHttpException;
@@ -22,7 +23,7 @@ class OrdenServicioController extends BaseController
     public function behaviors(): array
     {
         $behaviors = parent::behaviors();
-        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete', 'finalizar', 'agregar-servicio', 'eliminar-servicio', 'actualizar-precio'];
+        $behaviors['access']['rules'][0]['actions'] = ['index', 'view', 'create', 'update', 'delete', 'finalizar', 'agregar-servicio', 'eliminar-servicio', 'actualizar-precio', 'cambiar-estado', 'cancelar', 'esperando-repuestos', 'entregar'];
         return $behaviors;
     }
 
@@ -125,7 +126,7 @@ class OrdenServicioController extends BaseController
     }
 
     /**
-     * Crear nueva orden de servicio
+     * Crear nueva orden de servicio (HU-004, HU-005, HU-019, HU-026)
      * POST /api/ordenes-servicio
      */
     public function actionCreate(): array
@@ -140,19 +141,56 @@ class OrdenServicioController extends BaseController
             $model->cita_id = $request->post('cita_id');
             $model->cliente_id = $request->post('cliente_id');
             $model->vehiculo_id = $request->post('vehiculo_id');
+            
+            // HU-019: Validar que el vehículo pertenezca al cliente
+            if (!$model->validarVehiculoCliente()) {
+                throw new BadRequestHttpException('El vehículo seleccionado no pertenece al cliente especificado');
+            }
+            
+            // HU-005: Generar código único JOB-{número}
             $model->numero_orden = $this->generarNumeroOrden();
-            $model->estado = $request->post('estado', 'pendiente');
+            $model->estado = $request->post('estado', OrdenServicio::ESTADO_ABIERTO);
             $model->descripcion_problema = $request->post('descripcion_problema');
             $model->diagnostico = $request->post('diagnostico');
             $model->notas_internas = $request->post('notas_internas');
             $model->kilometraje = (int)$request->post('kilometraje', 0);
+            $model->prioridad = $request->post('prioridad', 'media');
             $model->created_by = Yii::$app->user->id ?? null;
 
             if (!$model->save()) {
                 throw new BadRequestHttpException(json_encode($model->getErrors()));
             }
 
-            // Guardar detalles de la orden
+            // HU-026: Si viene de una cita, transferir servicios precargados
+            $serviciosTransferidos = false;
+            if ($model->cita_id) {
+                $cita = \app\models\Cita::findOne($model->cita_id);
+                if ($cita) {
+                    // Obtener servicios de la cita
+                    $citaServicios = \app\models\CitaServicio::find()
+                        ->where(['cita_id' => $cita->id])
+                        ->all();
+                    
+                    // Transferir servicios a la orden
+                    foreach ($citaServicios as $citaServicio) {
+                        $detalle = new OrdenServicioDetalle();
+                        $detalle->orden_servicio_id = $model->id;
+                        $detalle->servicio_id = $citaServicio->servicio_id;
+                        $detalle->descripcion = $citaServicio->servicio ? $citaServicio->servicio->nombre : $citaServicio->descripcion;
+                        $detalle->cantidad = 1;
+                        $detalle->precio_unitario = $citaServicio->servicio ? $citaServicio->servicio->precio : 0;
+                        $detalle->precio_original = $citaServicio->servicio ? $citaServicio->servicio->precio : 0;
+                        $detalle->tipo = 'servicio';
+                        $detalle->save(false);
+                        $serviciosTransferidos = true;
+                    }
+                    
+                    $cita->estado = 'completada';
+                    $cita->save(false);
+                }
+            }
+
+            // Guardar detalles de la orden si se proporcionan directamente
             $detalles = $request->post('detalles', []);
             foreach ($detalles as $detalleData) {
                 $detalle = new OrdenServicioDetalle();
@@ -170,19 +208,11 @@ class OrdenServicioController extends BaseController
 
             $transaction->commit();
 
-            // Actualizar estado de la cita si existe
-            if ($model->cita_id) {
-                $cita = \app\models\Cita::findOne($model->cita_id);
-                if ($cita) {
-                    $cita->estado = 'completada';
-                    $cita->save(false);
-                }
-            }
-
             return [
                 'success' => true,
                 'data' => $model,
                 'message' => 'Orden de servicio creada correctamente',
+                'servicios_transferidos' => $serviciosTransferidos,
             ];
         } catch (\Exception $e) {
             $transaction->rollBack();
@@ -458,23 +488,237 @@ class OrdenServicioController extends BaseController
     }
 
     /**
-     * Generar número de orden único
+     * Generar número de orden único (HU-005)
+     * Formato: JOB-{número secuencial}
      */
     private function generarNumeroOrden(): string
     {
-        $year = date('Y');
-        $month = date('m');
+        // Obtener el último número de orden JOB
         $lastOrden = OrdenServicio::find()
-            ->where(['like', 'numero_orden', "OS-{$year}{$month}-", false])
+            ->where(['like', 'numero_orden', 'JOB-', false])
             ->orderBy(['id' => SORT_DESC])
             ->one();
-        
+
         $consecutivo = 1;
         if ($lastOrden) {
+            // Extraer el número del formato JOB-XXX
             $parts = explode('-', $lastOrden->numero_orden);
             $consecutivo = (int)end($parts) + 1;
         }
 
-        return sprintf('OS-%s%04d', $year . $month, $consecutivo);
+        return sprintf('JOB-%d', $consecutivo);
+    }
+
+    /**
+     * Cambiar estado de la orden con validación de transiciones (HU-007, HU-008, HU-021)
+     * POST /api/ordenes-servicio/{id}/cambiar-estado
+     */
+    public function actionCambiarEstado($id): array
+    {
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+        
+        $nuevoEstado = $request->post('estado');
+        $comentarios = $request->post('comentarios', '');
+        
+        if (!$nuevoEstado) {
+            throw new BadRequestHttpException('El estado es requerido');
+        }
+        
+        // Validar transición de estado (HU-008)
+        if (!$model->canTransitionTo($nuevoEstado)) {
+            throw new BadRequestHttpException($model->getTransitionErrorMessage($nuevoEstado));
+        }
+        
+        // Guardar estado anterior para historial
+        $estadoAnterior = $model->estado;
+        
+        // Actualizar estado
+        $model->estado = $nuevoEstado;
+        
+        // Si cambia a esperando_repuestos, registrar motivo
+        if ($nuevoEstado === OrdenServicio::ESTADO_ESPERANDO_REPUESTOS && $comentarios) {
+            $model->notas_internas = ($model->notas_internas ?? '') . "\n[Esperando repuestos] " . $comentarios;
+        }
+        
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
+        
+        // Registrar en historial (HU-020)
+        $model->registrarCambioEstado(
+            $estadoAnterior,
+            $nuevoEstado,
+            Yii::$app->user->id ?? null
+        );
+        
+        return [
+            'success' => true,
+            'message' => "Estado cambiado de '{$estadoAnterior}' a '{$nuevoEstado}'",
+            'data' => [
+                'id' => $model->id,
+                'numero_orden' => $model->numero_orden,
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo' => $nuevoEstado,
+            ],
+        ];
+    }
+
+    /**
+     * Cancelar orden abierta (HU-022)
+     * POST /api/ordenes-servicio/{id}/cancelar
+     */
+    public function actionCancelar($id): array
+    {
+        $model = $this->findModel($id);
+        
+        // Solo se pueden cancelar órdenes abiertas o esperando repuestos
+        if (!in_array($model->estado, [OrdenServicio::ESTADO_ABIERTO, OrdenServicio::ESTADO_ESPERANDO_REPUESTOS])) {
+            throw new BadRequestHttpException('Solo se pueden cancelar órdenes abiertas o esperando repuestos');
+        }
+        
+        // Validar transición
+        if (!$model->canTransitionTo(OrdenServicio::ESTADO_CANCELADA)) {
+            throw new BadRequestHttpException($model->getTransitionErrorMessage(OrdenServicio::ESTADO_CANCELADA));
+        }
+        
+        $estadoAnterior = $model->estado;
+        $model->estado = OrdenServicio::ESTADO_CANCELADA;
+        
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
+        
+        // Registrar en historial
+        $model->registrarCambioEstado(
+            $estadoAnterior,
+            OrdenServicio::ESTADO_CANCELADA,
+            Yii::$app->user->id ?? null
+        );
+        
+        return [
+            'success' => true,
+            'message' => 'Orden cancelada correctamente',
+            'data' => [
+                'id' => $model->id,
+                'numero_orden' => $model->numero_orden,
+                'estado' => OrdenServicio::ESTADO_CANCELADA,
+            ],
+        ];
+    }
+
+    /**
+     * Marcar orden como esperando repuestos (HU-021)
+     * POST /api/ordenes-servicio/{id}/esperando-repuestos
+     */
+    public function actionEsperandoRepuestos($id): array
+    {
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+        
+        $comentarios = $request->post('comentarios', '');
+        
+        // Validar que pueda cambiar a esperando_repuestos
+        if (!$model->canTransitionTo(OrdenServicio::ESTADO_ESPERANDO_REPUESTOS)) {
+            throw new BadRequestHttpException($model->getTransitionErrorMessage(OrdenServicio::ESTADO_ESPERANDO_REPUESTOS));
+        }
+        
+        $estadoAnterior = $model->estado;
+        $model->estado = OrdenServicio::ESTADO_ESPERANDO_REPUESTOS;
+        
+        if ($comentarios) {
+            $model->notas_internas = ($model->notas_internas ?? '') . "\n[Esperando repuestos - " . date('Y-m-d H:i:s') . "] " . $comentarios;
+        }
+        
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
+        
+        // Registrar en historial
+        $model->registrarCambioEstado(
+            $estadoAnterior,
+            OrdenServicio::ESTADO_ESPERANDO_REPUESTOS,
+            Yii::$app->user->id ?? null
+        );
+        
+        return [
+            'success' => true,
+            'message' => 'Orden marcada como esperando repuestos',
+            'data' => [
+                'id' => $model->id,
+                'numero_orden' => $model->numero_orden,
+                'estado' => OrdenServicio::ESTADO_ESPERANDO_REPUESTOS,
+            ],
+        ];
+    }
+
+    /**
+     * Entregar orden al cliente (HU-015, HU-016, HU-030)
+     * POST /api/ordenes-servicio/{id}/entregar
+     */
+    public function actionEntregar($id): array
+    {
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+        
+        // Validar que esté lista para entrega
+        if ($model->estado !== OrdenServicio::ESTADO_LISTO_PARA_ENTREGA) {
+            throw new BadRequestHttpException('La orden debe estar en estado "listo_para_entrega" para ser entregada');
+        }
+        
+        // Validar transición
+        if (!$model->canTransitionTo(OrdenServicio::ESTADO_ENTREGADA)) {
+            throw new BadRequestHttpException($model->getTransitionErrorMessage(OrdenServicio::ESTADO_ENTREGADA));
+        }
+        
+        // HU-015: Validar checklist mínimo (se puede extender según necesidades)
+        $checklistMinimo = $request->post('checklist', []);
+        $checklistRequerido = ['revision_final', 'limpieza', 'documentacion'];
+        
+        // Verificar items del checklist (si se proporciona)
+        foreach ($checklistRequerido as $item) {
+            if (!isset($checklistMinimo[$item]) || !$checklistMinimo[$item]) {
+                throw new BadRequestHttpException("Checklist incompleto: falta '{$item}'");
+            }
+        }
+        
+        $estadoAnterior = $model->estado;
+        $model->estado = OrdenServicio::ESTADO_ENTREGADA;
+        
+        // HU-016: Registrar fecha de entrega real
+        $model->fecha_entrega_real = date('Y-m-d H:i:s');
+        $model->finalizada_en = date('Y-m-d H:i:s');
+        $model->finalizada_por = Yii::$app->user->id ?? null;
+        
+        // Calcular total si no está calculado
+        if ($model->total == 0) {
+            $total = 0;
+            foreach ($model->detalles as $detalle) {
+                $total += $detalle->cantidad * $detalle->precio_unitario;
+            }
+            $model->total = $total;
+        }
+        
+        if (!$model->save()) {
+            throw new BadRequestHttpException(json_encode($model->getErrors()));
+        }
+        
+        // Registrar en historial
+        $model->registrarCambioEstado(
+            $estadoAnterior,
+            OrdenServicio::ESTADO_ENTREGADA,
+            Yii::$app->user->id ?? null
+        );
+        
+        return [
+            'success' => true,
+            'message' => 'Orden entregada correctamente',
+            'data' => [
+                'id' => $model->id,
+                'numero_orden' => $model->numero_orden,
+                'estado' => OrdenServicio::ESTADO_ENTREGADA,
+                'fecha_entrega_real' => $model->fecha_entrega_real,
+            ],
+        ];
     }
 }
