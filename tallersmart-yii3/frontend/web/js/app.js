@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initForms();
     initTables();
     initNotifications();
+    initSearchDebounce(); // HU-018
 });
 
 /**
@@ -437,3 +438,74 @@ window.TallerSmart = {
     formatDate,
     exportTableToCSV
 };
+
+/**
+ * Búsqueda con debounce (HU-018)
+ * Retrasa la ejecución de búsqueda 300ms después de dejar de escribir
+ */
+function initSearchDebounce() {
+    const searchInputs = document.querySelectorAll('.search-input-debounce');
+    
+    searchInputs.forEach(function(input) {
+        let debounceTimer;
+        
+        input.addEventListener('input', function() {
+            const searchTerm = this.value;
+            const targetTable = this.getAttribute('data-target');
+            const callbackUrl = this.getAttribute('data-callback');
+            
+            // Limpiar timer anterior
+            clearTimeout(debounceTimer);
+            
+            // Configurar nuevo timer de 300ms
+            debounceTimer = setTimeout(function() {
+                if (callbackUrl) {
+                    // Búsqueda AJAX con callback
+                    performSearch(searchTerm, callbackUrl, targetTable);
+                } else if (targetTable) {
+                    // Búsqueda local en tabla
+                    filterTable(targetTable, searchTerm);
+                }
+            }, 300);
+        });
+    });
+}
+
+/**
+ * Realizar búsqueda AJAX
+ */
+function performSearch(searchTerm, url, targetElement) {
+    fetch(url + '?search=' + encodeURIComponent(searchTerm))
+        .then(response => response.json())
+        .then(data => {
+            updateSearchResults(data, targetElement);
+        })
+        .catch(error => {
+            console.error('Error en búsqueda:', error);
+        });
+}
+
+/**
+ * Filtrar tabla localmente
+ */
+function filterTable(tableId, searchTerm) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(function(row) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+    });
+}
+
+/**
+ * Actualizar resultados de búsqueda
+ */
+function updateSearchResults(data, targetElement) {
+    const container = document.querySelector(targetElement);
+    if (!container) return;
+    
+    // Implementación específica según el tipo de resultado
+    console.log('Resultados actualizados:', data);
+}
