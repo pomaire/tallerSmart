@@ -4,11 +4,67 @@
 <div x-data="citasModule" x-init="init()" class="p-6">
 <div class="page-header mb-4"><div class="header-content"><h1 class="text-2xl font-bold"><i class="fas fa-calendar-alt"></i> Gestión de Citas</h1><p>Agenda y administra las citas de servicio del taller</p></div><div class="header-actions"><button type="button" class="btn btn-primary" @click="abrirModalCrear()"><i class="fas fa-plus"></i> Nueva Cita</button><button type="button" class="btn btn-secondary" @click="toggleVistaCalendario()"><i class="fas" :class="vistaCalendario ? 'fa-list' : 'fa-calendar'"></i> <span x-text="vistaCalendario ? 'Ver Lista' : 'Ver Calendario'"></span></button></div></div>
 
+<!-- HU-019: Contador de reservas activas -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase">Reservas Activas Hoy</small>
+                        <h3 class="mb-0" x-text="reservasActivasHoy"></h3>
+                    </div>
+                    <i class="fas fa-calendar-check fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase">Confirmadas</small>
+                        <h3 class="mb-0" x-text="contadorPorEstado.confirmada || 0"></h3>
+                    </div>
+                    <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase">En Progreso</small>
+                        <h3 class="mb-0" x-text="contadorPorEstado.en_progreso || 0"></h3>
+                    </div>
+                    <i class="fas fa-tools fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase">Pendientes</small>
+                        <h3 class="mb-0" x-text="contadorPorEstado.pendiente || 0"></h3>
+                    </div>
+                    <i class="fas fa-clock fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Filtros -->
-<div class="card mb-4"><div class="card-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Buscar</label><input type="text" class="form-control" x-model="filtroBusqueda" placeholder="Cliente, patente..."></div><div class="col-md-2"><label class="form-label">Estado</label><select class="form-select" x-model="filtroEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="confirmada">Confirmada</option><option value="en_espera">En Espera</option><option value="cancelada">Cancelada</option><option value="completada">Completada</option></select></div><div class="col-md-2"><label class="form-label">Desde</label><input type="date" class="form-control" x-model="filtroFechaDesde"></div><div class="col-md-2"><label class="form-label">Hasta</label><input type="date" class="form-control" x-model="filtroFechaHasta"></div><div class="col-md-2"><label class="form-label">Técnico</label><select class="form-select" x-model="filtroTecnico"><option value="">Todos</option>{% for tecnico in tecnicos %}<option value="{{ tecnico.id }}">{{ tecnico.nombre }}</option>{% endfor %}</select></div><div class="col-md-1 d-flex align-items-end"><button type="button" class="btn btn-outline-secondary w-100" @click="limpiarFiltros()"><i class="fas fa-times"></i></button></div></div></div></div>
+<div class="card mb-4"><div class="card-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Buscar</label><input type="text" class="form-control search-input-debounce" x-model="filtroBusqueda" placeholder="Cliente, patente..." @input="buscarConDebounce()"></div><div class="col-md-2"><label class="form-label">Estado</label><select class="form-select" x-model="filtroEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="confirmada">Confirmada</option><option value="en_progreso">En Progreso</option><option value="en_espera">En Espera</option><option value="cancelada">Cancelada</option><option value="no_show">No Show</option><option value="completada">Completada</option></select></div><div class="col-md-2"><label class="form-label">Desde</label><input type="date" class="form-control" x-model="filtroFechaDesde"></div><div class="col-md-2"><label class="form-label">Hasta</label><input type="date" class="form-control" x-model="filtroFechaHasta"></div><div class="col-md-2"><label class="form-label">Técnico</label><select class="form-select" x-model="filtroTecnico"><option value="">Todos</option>{% for tecnico in tecnicos %}<option value="{{ tecnico.id }}">{{ tecnico.nombre }}</option>{% endfor %}</select></div><div class="col-md-1 d-flex align-items-end"><button type="button" class="btn btn-outline-secondary w-100" @click="limpiarFiltros()"><i class="fas fa-times"></i></button></div></div><!-- HU-013: Toggle ver canceladas --><div class="row mt-3"><div class="col-12"><div class="form-check form-switch"><input type="checkbox" class="form-check-input" id="toggleCanceladas" x-model="verCanceladas" @change="cargarCitas()"><label class="form-check-label" for="toggleCanceladas">Ver citas canceladas</label></div></div></div></div></div>
 
 <!-- Calendario -->
-<div class="card mb-4" x-show="vistaCalendario"><div class="card-body"><div class="calendar-header d-flex justify-content-between align-items-center mb-3"><button class="btn btn-sm btn-outline-secondary" @click="mesAnterior()"><i class="fas fa-chevron-left"></i></button><h4 class="mb-0" x-text="nombreMesActual()"></h4><button class="btn btn-sm btn-outline-secondary" @click="mesSiguiente()"><i class="fas fa-chevron-right"></i></button></div><div class="calendar-grid"><div class="calendar-weekdays"><div class="weekday">Dom</div><div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mié</div><div class="weekday">Jue</div><div class="weekday">Vie</div><div class="weekday">Sáb</div></div><div class="calendar-days"><template x-for="dia in diasDelMes()" :key="dia.fecha"><div class="calendar-day" :class="{'other-month': !dia.esEsteMes, 'today': dia.esHoy, 'has-citas': dia.tieneCitas}" @click="verCitasDelDia(dia)"><div class="day-number" x-text="dia.dia"></div><div class="day-citas" x-show="dia.tieneCitas"><span class="badge bg-primary" x-text="dia.cantidadCitas"></span></div></div></template></div></div></div></div>
+<div class="card mb-4" x-show="vistaCalendario"><div class="card-body"><div class="calendar-header d-flex justify-content-between align-items-center mb-3"><button class="btn btn-sm btn-outline-secondary" @click="mesAnterior()"><i class="fas fa-chevron-left"></i></button><h4 class="mb-0" x-text="nombreMesActual()"></h4><button class="btn btn-sm btn-outline-secondary" @click="mesSiguiente()"><i class="fas fa-chevron-right"></i></button></div><!-- HU-014: Leyenda de estados --><div class="legend mb-3 d-flex gap-3 flex-wrap"><span class="badge bg-danger">Workshop Full</span><span class="badge bg-primary">Con Citas</span><span class="badge bg-info">Quick Service</span></div><div class="calendar-grid"><div class="calendar-weekdays"><div class="weekday">Dom</div><div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mié</div><div class="weekday">Jue</div><div class="weekday">Vie</div><div class="weekday">Sáb</div></div><div class="calendar-days"><template x-for="dia in diasDelMes()" :key="dia.fecha"><div class="calendar-day" :class="{'other-month': !dia.esEsteMes, 'today': dia.esHoy, 'has-citas': dia.tieneCitas, 'workshop-full': dia.esLleno}" @click="verCitasDelDia(dia)"><div class="day-number" x-text="dia.dia"></div><div class="day-citas" x-show="dia.tieneCitas"><span class="badge bg-primary" x-text="dia.cantidadCitas"></span></div><div class="workshop-full-badge" x-show="dia.esLleno"><span class="badge bg-danger">Full</span></div></div></template></div></div></div></div>
 
 <!-- Lista -->
 <div class="card" x-show="!vistaCalendario"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th width="60"><input type="checkbox" class="form-check-input"></th><th>Fecha/Hora</th><th>Cliente</th><th>Vehículo</th><th>Servicios</th><th>Técnico</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><template x-for="cita in citasFiltradas" :key="cita.id"><tr :class="{'table-warning': cita.estado === 'pendiente', 'table-success': cita.estado === 'completada'}"><td><input type="checkbox" class="form-check-input"></td><td><div class="fw-bold" x-text="formatearFecha(cita.fecha)"></div><div class="text-muted small" x-text="formatearHora(cita.hora_inicio) + ' - ' + formatearHora(cita.hora_fin)"></div></td><td><div class="fw-bold" x-text="cita.cliente_nombre"></div><div class="text-muted small" x-text="cita.cliente_rut"></div></td><td><div x-text="cita.vehiculo_patente"></div><div class="text-muted small" x-text="cita.vehiculo_modelo"></div></td><td><div class="servicios-list"><template x-for="servicio in cita.servicios" :key="servicio.id"><span class="badge bg-info me-1 mb-1" x-text="servicio.nombre"></span></template></div></td><td><div x-text="cita.tecnico_nombre || 'Sin asignar'"></div></td><td><span class="badge" :class="{'bg-warning': cita.estado === 'pendiente', 'bg-success': cita.estado === 'confirmada' || cita.estado === 'completada', 'bg-secondary': cita.estado === 'en_espera', 'bg-danger': cita.estado === 'cancelada'}" x-text="estadoTexto(cita.estado)"></span></td><td><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary" @click="verDetalle(cita)" title="Ver"><i class="fas fa-eye"></i></button><button class="btn btn-outline-secondary" @click="editarCita(cita)" title="Editar"><i class="fas fa-edit"></i></button><button class="btn btn-outline-success" @click="confirmarCita(cita)" x-show="cita.estado === 'pendiente'" title="Confirmar"><i class="fas fa-check"></i></button><button class="btn btn-outline-danger" @click="cancelarCita(cita)" x-show="cita.estado !== 'cancelada' && cita.estado !== 'completada'" title="Cancelar"><i class="fas fa-times"></i></button></div></td></tr></template><tr x-show="citasFiltradas.length === 0"><td colspan="8" class="text-center py-4"><i class="fas fa-calendar-times fa-3x text-muted mb-3"></i><p class="text-muted">No hay citas registradas</p></td></tr></tbody></table></div></div><div class="card-footer d-flex justify-content-between align-items-center"><div class="text-muted">Mostrando <span x-text="citasFiltradas.length"></span> de <span x-text="totalCitas"></span> citas</div><nav><ul class="pagination pagination-sm mb-0"><li class="page-item" :class="{disabled: paginaActual === 1}"><a class="page-link" href="#" @click.prevent="paginaActual--">Anterior</a></li><template x-for="p in totalPaginas" :key="p"><li class="page-item" :class="{active: p === paginaActual}"><a class="page-link" href="#" @click.prevent="irAPagina(p)" x-text="p"></a></li></template><li class="page-item" :class="{disabled: paginaActual === totalPaginas}"><a class="page-link" href="#" @click.prevent="paginaActual++">Siguiente</a></li></ul></nav></div></div>
@@ -19,7 +75,191 @@
 <style>.calendar-grid{display:grid;gap:1px;background:#dee2e6;border:1px solid #dee2e6}.calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:#f8f9fa}.weekday{padding:.5rem;text-align:center;font-weight:700;font-size:.875rem}.calendar-days{display:grid;grid-template-columns:repeat(7,1fr);background:#fff}.calendar-day{min-height:100px;padding:.5rem;background:#fff;cursor:pointer}.calendar-day:hover{background:#f8f9fa}.calendar-day.other-month{background:#f8f9fa;color:#6c757d}.calendar-day.today{background:#e7f1ff;border:2px solid #0d6efd}.calendar-day.has-citas{background:#fff3cd}.day-number{font-weight:700;margin-bottom:.25rem}.day-citas{font-size:.75rem}.servicios-list{max-width:200px}.btn-group-sm .btn{padding:.25rem .5rem;font-size:.75rem}</style>
 
 <script>
-document.addEventListener('alpine:init',()=>{Alpine.data('citasModule',()=>({citas:[],citaSeleccionada:null,modoEdicion:false,vistaCalendario:false,paginaActual:1,totalPaginas:1,totalCitas:0,filtroBusqueda:'',filtroEstado:'',filtroFechaDesde:'',filtroFechaHasta:'',filtroTecnico:'',citaForm:{id:null,cliente_id:'',vehiculo_id:'',fecha:'',hora_inicio:'',hora_fin:'',tecnico_id:'',telefono_contacto:'',notas:'',servicios:[]},servicioSeleccionado:'',motivoCancelacion:'',clientes:{{clientes|json_encode|raw}},vehiculos:{{vehiculos|json_encode|raw}},vehiculosFiltrados:[],tecnicos:{{tecnicos|json_encode|raw}},servicios:{{servicios|json_encode|raw}},mesActual:new Date().getMonth(),anioActual:new Date().getFullYear(),init(){this.cargarCitas()},async cargarCitas(){const p=new URLSearchParams({page:this.paginaActual,search:this.filtroBusqueda,estado:this.filtroEstado,fecha_desde:this.filtroFechaDesde,fecha_hasta:this.filtroFechaHasta,tecnico_id:this.filtroTecnico});const r=await fetch(`/api/cita?${p}`);const d=await r.json();this.citas=d.items||[];this.totalPaginas=d.pages||1;this.totalCitas=d.total||0},get citasFiltradas(){return this.citas},nombreMesActual(){const m=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];return`${m[this.mesActual]} ${this.anioActual}`},diasDelMes(){const dias=[];const pd=new Date(this.anioActual,this.mesActual,1);const ud=new Date(this.anioActual,this.mesActual+1,0);const di=pd.getDay();const pda=new Date(this.anioActual,this.mesActual,0);for(let i=di-1;i>=0;i--){const d=pda.getDate()-i;const f=new Date(this.anioActual,this.mesActual-1,d);dias.push({fecha:f.toISOString().split('T')[0],dia:d,esEsteMes:false,esHoy:false,tieneCitas:false,cantidadCitas:0})}const hoy=new Date();for(let i=1;i<=ud.getDate();i++){const f=new Date(this.anioActual,this.mesActual,i);const fs=f.toISOString().split('T')[0];const cd=this.citas.filter(c=>c.fecha===fs);dias.push({fecha:fs,dia:i,esEsteMes:true,esHoy:hoy.toDateString()===f.toDateString(),tieneCitas:cd.length>0,cantidadCitas:cd.length})}const dr=42-dias.length;for(let i=1;i<=dr;i++){const f=new Date(this.anioActual,this.mesActual+1,i);dias.push({fecha:f.toISOString().split('T')[0],dia:i,esEsteMes:false,esHoy:false,tieneCitas:false,cantidadCitas:0})}return dias},mesAnterior(){if(this.mesActual===0){this.mesActual=11;this.anioActual--}else{this.mesActual--}},mesSiguiente(){if(this.mesActual===11){this.mesActual=0;this.anioActual++}else{this.mesActual++}},verCitasDelDia(d){this.filtroFechaDesde=d.fecha;this.filtroFechaHasta=d.fecha;this.vistaCalendario=false;this.cargarCitas()},toggleVistaCalendario(){this.vistaCalendario=!this.vistaCalendario},limpiarFiltros(){this.filtroBusqueda='';this.filtroEstado='';this.filtroFechaDesde='';this.filtroFechaHasta='';this.filtroTecnico='';this.paginaActual=1;this.cargarCitas()},abrirModalCrear(){this.modoEdicion=false;this.citaForm={id:null,cliente_id:'',vehiculo_id:'',fecha:new Date().toISOString().split('T')[0],hora_inicio:'09:00',hora_fin:'10:00',tecnico_id:'',telefono_contacto:'',notas:'',servicios:[]};this.servicioSeleccionado='';this.actualizarVehiculosFiltrados();new bootstrap.Modal(document.getElementById('modalCita')).show()},editarCita(c){this.modoEdicion=true;this.citaForm={id:c.id,cliente_id:c.cliente_id,vehiculo_id:c.vehiculo_id,fecha:c.fecha,hora_inicio:c.hora_inicio,hora_fin:c.hora_fin,tecnico_id:c.tecnico_id||'',telefono_contacto:c.telefono_contacto||'',notas:c.notas||'',servicios:c.servicios||[]};this.actualizarVehiculosFiltrados();new bootstrap.Modal(document.getElementById('modalCita')).show()},actualizarVehiculosFiltrados(){if(this.citaForm.cliente_id){this.vehiculosFiltrados=this.vehiculos.filter(v=>v.cliente_id==this.citaForm.cliente_id)}else{this.vehiculosFiltrados=this.vehiculos}},agregarServicio(){if(!this.servicioSeleccionado)return;const s=this.servicios.find(sv=>sv.id==this.servicioSeleccionado);if(s&&!this.citaForm.servicios.some(sv=>sv.id==s.id)){this.citaForm.servicios.push(s)}this.servicioSeleccionado=''},eliminarServicio(i){this.citaForm.servicios.splice(i,1)},async guardarCita(){if(!this.citaForm.cliente_id||!this.citaForm.vehiculo_id||!this.citaForm.fecha){alert('Complete campos obligatorios');return}if(this.citaForm.servicios.length===0){alert('Agregue al menos un servicio');return}try{const u=this.modoEdicion?`/api/cita/${this.citaForm.id}`:'/api/cita';const m=this.modoEdicion?'PUT':'POST';const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(this.citaForm)});if(r.ok){alert(this.modoEdicion?'Cita actualizada':'Cita creada');bootstrap.Modal.getInstance(document.getElementById('modalCita')).hide();this.cargarCitas()}else{const e=await r.json();alert('Error: '+(e.message||'No se pudo guardar'))}}catch(e){console.error(e);alert('Error al guardar')}},verDetalle(c){this.citaSeleccionada=c;new bootstrap.Modal(document.getElementById('modalDetalle')).show()},confirmarCita(c){if(confirm('¿Confirmar cita?')){fetch(`/api/cita/${c.id}/confirmar`,{method:'POST'}).then(r=>{if(r.ok){alert('Confirmada');this.cargarCitas()}})}},cancelarCita(c){this.citaSeleccionada=c;this.motivoCancelacion='';new bootstrap.Modal(document.getElementById('modalCancelar')).show()},async confirmarCancelacion(){if(!this.motivoCancelacion.trim()){alert('Ingrese motivo');return}try{const r=await fetch(`/api/cita/${this.citaSeleccionada.id}/cancelar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({motivo:this.motivoCancelacion})});if(r.ok){alert('Cancelada');bootstrap.Modal.getInstance(document.getElementById('modalCancelar')).hide();this.cargarCitas()}}catch(e){alert('Error')}},formatearFecha(f){const[y,m,d]=f.split('-');return`${d}/${m}/${y}`},formatearHora(h){return h.substring(0,5)},estadoTexto(e){const t={'pendiente':'Pendiente','confirmada':'Confirmada','en_espera':'En Espera','cancelada':'Cancelada','completada':'Completada'};return t[e]||e},irAPagina(p){this.paginaActual=p;this.cargarCitas()}}))});
+document.addEventListener('alpine:init',()=>{Alpine.data('citasModule',()=>({
+  citas:[],
+  citaSeleccionada:null,
+  modoEdicion:false,
+  vistaCalendario:false,
+  paginaActual:1,
+  totalPaginas:1,
+  totalCitas:0,
+  filtroBusqueda:'',
+  filtroEstado:'',
+  filtroFechaDesde:'',
+  filtroFechaHasta:'',
+  filtroTecnico:'',
+  verCanceladas:false,
+  citaForm:{id:null,cliente_id:'',vehiculo_id:'',fecha:'',hora_inicio:'',hora_fin:'',tecnico_id:'',telefono_contacto:'',notas:'',servicios:[]},
+  servicioSeleccionado:'',
+  motivoCancelacion:'',
+  clientes:{{clientes|json_encode|raw}},
+  vehiculos:{{vehiculos|json_encode|raw}},
+  vehiculosFiltrados:[],
+  tecnicos:{{tecnicos|json_encode|raw}},
+  servicios:{{servicios|json_encode|raw}},
+  mesActual:new Date().getMonth(),
+  anioActual:new Date().getFullYear(),
+  reservasActivasHoy:0,
+  contadorPorEstado:{},
+  debounceTimer:null,
+  
+  init(){this.cargarCitas();this.cargarEstadisticas()},
+  
+  async cargarEstadisticas(){
+    try{
+      const r=await fetch('/api/citas/estadisticas?mes='+new Date().toISOString().slice(0,7));
+      const d=await r.json();
+      if(d.success){
+        this.reservasActivasHoy=d.data.resumen.total;
+        this.contadorPorEstado={
+          pendiente:d.data.resumen.pendientes,
+          confirmada:d.data.resumen.confirmadas,
+          en_progreso:d.data.resumen.en_progreso,
+          completada:d.data.resumen.completadas,
+          cancelada:d.data.resumen.canceladas,
+          no_show:d.data.resumen.no_show
+        };
+      }
+    }catch(e){console.error('Error cargando estadísticas:',e)}
+  },
+  
+  buscarConDebounce(){
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer=setTimeout(()=>{this.cargarCitas()},300);
+  },
+  
+  async cargarCitas(){
+    const p=new URLSearchParams({
+      page:this.paginaActual,
+      search:this.filtroBusqueda,
+      estado:this.filtroEstado,
+      fecha_desde:this.filtroFechaDesde,
+      fecha_hasta:this.filtroFechaHasta,
+      tecnico_id:this.filtroTecnico,
+      ver_canceladas:this.verCanceladas
+    });
+    const r=await fetch(`/api/citas?${p}`);
+    const d=await r.json();
+    this.citas=d.items||[];
+    this.totalPaginas=d.pages||1;
+    this.totalCitas=d.total||0;
+  },
+  
+  get citasFiltradas(){return this.citas},
+  
+  nombreMesActual(){
+    const m=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    return`${m[this.mesActual]} ${this.anioActual}`;
+  },
+  
+  diasDelMes(){
+    const dias=[];
+    const pd=new Date(this.anioActual,this.mesActual,1);
+    const ud=new Date(this.anioActual,this.mesActual+1,0);
+    const di=pd.getDay();
+    const pda=new Date(this.anioActual,this.mesActual,0);
+    for(let i=di-1;i>=0;i--){
+      const d=pda.getDate()-i;
+      const f=new Date(this.anioActual,this.mesActual-1,d);
+      dias.push({fecha:f.toISOString().split('T')[0],dia:d,esEsteMes:false,esHoy:false,tieneCitas:false,cantidadCitas:0,esLleno:false});
+    }
+    const hoy=new Date();
+    for(let i=1;i<=ud.getDate();i++){
+      const f=new Date(this.anioActual,this.mesActual,i);
+      const fs=f.toISOString().split('T')[0];
+      const cd=this.citas.filter(c=>c.fecha===fs);
+      dias.push({fecha:fs,dia:i,esEsteMes:true,esHoy:hoy.toDateString()===f.toDateString(),tieneCitas:cd.length>0,cantidadCitas:cd.length,esLleno:cd.length>=10});
+    }
+    const dr=42-dias.length;
+    for(let i=1;i<=dr;i++){
+      const f=new Date(this.anioActual,this.mesActual+1,i);
+      dias.push({fecha:f.toISOString().split('T')[0],dia:i,esEsteMes:false,esHoy:false,tieneCitas:false,cantidadCitas:0,esLleno:false});
+    }
+    return dias;
+  },
+  
+  mesAnterior(){if(this.mesActual===0){this.mesActual=11;this.anioActual--}else{this.mesActual--}},
+  mesSiguiente(){if(this.mesActual===11){this.mesActual=0;this.anioActual++}else{this.mesActual++}},
+  verCitasDelDia(d){this.filtroFechaDesde=d.fecha;this.filtroFechaHasta=d.fecha;this.vistaCalendario=false;this.cargarCitas()},
+  toggleVistaCalendario(){this.vistaCalendario=!this.vistaCalendario},
+  limpiarFiltros(){this.filtroBusqueda='';this.filtroEstado='';this.filtroFechaDesde='';this.filtroFechaHasta='';this.filtroTecnico='';this.verCanceladas=false;this.paginaActual=1;this.cargarCitas()},
+  
+  abrirModalCrear(){
+    this.modoEdicion=false;
+    this.citaForm={id:null,cliente_id:'',vehiculo_id:'',fecha:new Date().toISOString().split('T')[0],hora_inicio:'09:00',hora_fin:'10:00',tecnico_id:'',telefono_contacto:'',notas:'',servicios:[]};
+    this.servicioSeleccionado='';
+    this.actualizarVehiculosFiltrados();
+    new bootstrap.Modal(document.getElementById('modalCita')).show();
+  },
+  
+  editarCita(c){
+    this.modoEdicion=true;
+    this.citaForm={id:c.id,cliente_id:c.cliente_id,vehiculo_id:c.vehiculo_id,fecha:c.fecha,hora_inicio:c.hora_inicio,hora_fin:c.hora_fin,tecnico_id:c.tecnico_id||'',telefono_contacto:c.telefono_contacto||'',notas:c.notas||'',servicios:c.servicios||[]};
+    this.actualizarVehiculosFiltrados();
+    new bootstrap.Modal(document.getElementById('modalCita')).show();
+  },
+  
+  actualizarVehiculosFiltrados(){
+    if(this.citaForm.cliente_id){this.vehiculosFiltrados=this.vehiculos.filter(v=>v.cliente_id==this.citaForm.cliente_id)}
+    else{this.vehiculosFiltrados=this.vehiculos}
+  },
+  
+  agregarServicio(){
+    if(!this.servicioSeleccionado)return;
+    const s=this.servicios.find(sv=>sv.id==this.servicioSeleccionado);
+    if(s&&!this.citaForm.servicios.some(sv=>sv.id==s.id)){this.citaForm.servicios.push(s)}
+    this.servicioSeleccionado='';
+  },
+  
+  eliminarServicio(i){this.citaForm.servicios.splice(i,1)},
+  
+  async guardarCita(){
+    if(!this.citaForm.cliente_id||!this.citaForm.vehiculo_id||!this.citaForm.fecha){alert('Complete campos obligatorios');return}
+    if(this.citaForm.servicios.length===0){alert('Agregue al menos un servicio');return}
+    try{
+      const u=this.modoEdicion?`/api/citas/${this.citaForm.id}`:'/api/citas';
+      const m=this.modoEdicion?'PUT':'POST';
+      const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(this.citaForm)});
+      if(r.ok){
+        alert(this.modoEdicion?'Cita actualizada':'Cita creada');
+        bootstrap.Modal.getInstance(document.getElementById('modalCita')).hide();
+        this.cargarCitas();
+        this.cargarEstadisticas();
+      }else{
+        const e=await r.json();
+        alert('Error: '+(e.message||'No se pudo guardar'));
+      }
+    }catch(e){console.error(e);alert('Error al guardar')}
+  },
+  
+  verDetalle(c){this.citaSeleccionada=c;new bootstrap.Modal(document.getElementById('modalDetalle')).show()},
+  
+  async confirmarCita(c){
+    if(confirm('¿Confirmar cita?')){
+      try{
+        const r=await fetch(`/api/citas/${c.id}/confirmar`,{method:'POST'});
+        if(r.ok){alert('Cita confirmada');this.cargarCitas();this.cargarEstadisticas()}
+        else{const e=await r.json();alert('Error: '+e.message)}
+      }catch(e){alert('Error al confirmar')}
+    }
+  },
+  
+  cancelarCita(c){this.citaSeleccionada=c;this.motivoCancelacion='';new bootstrap.Modal(document.getElementById('modalCancelar')).show()},
+  
+  async confirmarCancelacion(){
+    if(!this.motivoCancelacion.trim()){alert('Ingrese motivo');return}
+    try{
+      const r=await fetch(`/api/citas/${this.citaSeleccionada.id}/cancel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({motivo:this.motivoCancelacion})});
+      if(r.ok){alert('Cita cancelada');bootstrap.Modal.getInstance(document.getElementById('modalCancelar')).hide();this.cargarCitas();this.cargarEstadisticas()}
+      else{const e=await r.json();alert('Error: '+e.message)}
+    }catch(e){alert('Error al cancelar')}
+  },
+  
+  formatearFecha(f){const[y,m,d]=f.split('-');return`${d}/${m}/${y}`},
+  formatearHora(h){return h.substring(0,5)},
+  estadoTexto(e){const t={'pendiente':'Pendiente','confirmada':'Confirmada','en_espera':'En Espera','cancelada':'Cancelada','completada':'Completada','no_show':'No Show','en_progreso':'En Progreso'};return t[e]||e},
+  irAPagina(p){this.paginaActual=p;this.cargarCitas()}
+}))});
 </script>
 </div>
 {% endblock %}
