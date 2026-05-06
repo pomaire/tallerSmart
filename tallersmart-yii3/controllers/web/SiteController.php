@@ -19,6 +19,14 @@ class SiteController extends BaseController
     public function behaviors()
     {
         $behaviors = parent::behaviors();
+        
+        // Agregar rate limiting (HU-015)
+        $behaviors['rateLimiter'] = [
+            'class' => \app\behaviors\RateLimitBehavior::class,
+            'maxRequests' => 20,
+            'period' => 60,
+        ];
+        
         $behaviors['access']['rules'][] = [
             'actions' => ['login'],
             'allow' => true,
