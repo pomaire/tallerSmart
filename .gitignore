@@ -3,9 +3,10 @@
 vendor/
 composer.lock
 
-# Runtime files
-runtime/
-logs/
+# Logs
+*.log
+runtime/logs/
+runtime/cache/
 
 # Environment
 .env
@@ -22,18 +23,21 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
+# Tests
+tests/_output/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Build artifacts
-dist/
-build/
-target/
-*.o
-*.obj
-*.exe
-*.dll
+*.phar
 *.so
-*.a
-*.out
+*.dll
+*.dylib
+
+# Temp files
+*.tmp
+*.temp
 ```

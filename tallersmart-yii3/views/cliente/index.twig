@@ -10,36 +10,120 @@
             <h1 class="text-2xl font-bold text-gray-800">Clientes</h1>
             <p class="text-gray-600 text-sm mt-1">Gestión de clientes del taller</p>
         </div>
-        <button @click="abrirModalCrear()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-            <i class="fas fa-plus"></i>
-            <span>Nuevo Cliente</span>
-        </button>
+        <div class="flex gap-3">
+            <!-- HU-021: Botón Exportar CSV -->
+            <button @click="exportarCSV()" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                <i class="fas fa-file-csv"></i>
+                <span>Exportar CSV</span>
+            </button>
+            <button @click="abrirModalCrear()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>Nuevo Cliente</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- HU-010: Tarjetas de Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Total Clientes</p>
+                    <p class="text-3xl font-bold text-gray-800" x-text="estadisticas.total_clientes">0</p>
+                </div>
+                <div class="bg-blue-100 p-3 rounded-full">
+                    <i class="fas fa-users text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Clientes Activos</p>
+                    <p class="text-3xl font-bold text-green-600" x-text="estadisticas.clientes_activos">0</p>
+                </div>
+                <div class="bg-green-100 p-3 rounded-full">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Nuevos (Mes)</p>
+                    <p class="text-3xl font-bold text-purple-600" x-text="estadisticas.clientes_nuevos_mes">0</p>
+                </div>
+                <div class="bg-purple-100 p-3 rounded-full">
+                    <i class="fas fa-user-plus text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Filtros y Búsqueda -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- HU-002: Búsqueda por nombre -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar por Nombre</label>
                 <div class="relative">
                     <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" x-model="filtroBusqueda" placeholder="RUT, nombre o email..."
+                    <input type="text" x-model="filtroNombre" placeholder="Nombre..."
                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
             </div>
+            <!-- HU-003: Búsqueda por email -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar por Email</label>
+                <div class="relative">
+                    <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="email" x-model="filtroEmail" placeholder="email@ejemplo.com"
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            <!-- HU-004: Búsqueda por teléfono -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar por Teléfono</label>
+                <div class="relative">
+                    <i class="fas fa-phone absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="tel" x-model="filtroTelefono" placeholder="+56 9..."
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            <!-- HU-011/HU-012: Filtro por estado -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                 <select x-model="filtroEstado" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="">Todos</option>
                     <option value="1">Activos</option>
-                    <option value="0">Inactivos</option>
+                    <option value="0">Cancelados</option>
                 </select>
             </div>
+            <!-- HU-024: Filtro por fecha -->
             <div class="flex items-end">
-                <button @click="aplicarFiltros()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors">
+                <button @click="aplicarFiltros()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
                     <i class="fas fa-filter mr-2"></i>Filtrar
                 </button>
+            </div>
+        </div>
+        <!-- Filtro de fechas avanzado -->
+        <div class="mt-4 pt-4 border-t border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                    <input type="date" x-model="fechaInicio" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+                    <input type="date" x-model="fechaFin" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="md:col-span-2 flex items-end">
+                    <button @click="limpiarFiltros()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-times mr-2"></i>Limpiar Filtros
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -50,10 +134,16 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RUT</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                        <!-- HU-027: Icono de email -->
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-envelope text-blue-500 mr-1"></i>Email
+                        </th>
+                        <!-- HU-028: Icono de teléfono -->
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-phone text-blue-500 mr-1"></i>Teléfono
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehículos</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -63,7 +153,7 @@
                     <template x-for="cliente in clientesFiltrados" :key="cliente.id">
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm font-mono font-medium text-gray-900" x-text="formatearRUT(cliente.rut)"></span>
+                                <span class="text-sm font-mono font-medium text-gray-900" x-text="cliente.documento"></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
@@ -72,7 +162,6 @@
                                     </div>
                                     <div class="ml-4">
                                         <div class="text-sm font-medium text-gray-900" x-text="cliente.nombre"></div>
-                                        <div class="text-sm text-gray-500" x-text="cliente.apellido"></div>
                                     </div>
                                 </div>
                             </td>
@@ -84,23 +173,43 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
-                                      x-text="cliente.vehiculos_count + ' vehículo(s)'"></span>
+                                      x-text="(cliente.vehiculos_count || 0) + ' vehículo(s)'"></span>
                             </td>
+                            <!-- HU-013: Badge de estado con colores -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                      :class="cliente.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                                      x-text="cliente.activo ? 'Activo' : 'Inactivo'"></span>
+                                      :class="cliente.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                      x-text="cliente.activo ? 'Activo' : 'Cancelado'"></span>
                             </td>
+                            <!-- HU-026: Menú contextual de acciones -->
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button @click="verCliente(cliente)" class="text-blue-600 hover:text-blue-900 mr-3" title="Ver">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button @click="editarCliente(cliente)" class="text-yellow-600 hover:text-yellow-900 mr-3" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button @click="eliminarCliente(cliente)" class="text-red-600 hover:text-red-900" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="relative" x-data="{ open: false }">
+                                    <button @click="open = !open" class="text-gray-600 hover:text-gray-900">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <div x-show="open" @click.away="open = false" 
+                                         class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                        <a href="#" @click.prevent="verCliente(cliente); open = false" 
+                                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="fas fa-eye mr-2"></i>Ver
+                                        </a>
+                                        <a href="#" @click.prevent="editarCliente(cliente); open = false" 
+                                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="fas fa-edit mr-2"></i>Editar
+                                        </a>
+                                        <a href="#" @click.prevent="verVehiculos(cliente); open = false" 
+                                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="fas fa-car mr-2"></i>Ver vehículos
+                                        </a>
+                                        <!-- Solo mostrar desactivar para administradores y si está activo -->
+                                        <template x-if="usuarioRol === 'admin' && cliente.activo">
+                                            <a href="#" @click.prevent="desactivarCliente(cliente); open = false" 
+                                               class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                                <i class="fas fa-ban mr-2"></i>Desactivar
+                                            </a>
+                                        </template>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -238,7 +347,7 @@
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalVerAbierto = false"></div>
             
-            <div class="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+            <div class="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-gray-900">Detalle del Cliente</h3>
                     <button @click="modalVerAbierto = false" class="text-gray-400 hover:text-gray-600">
@@ -246,31 +355,97 @@
                     </button>
                 </div>
 
+                <!-- HU-030: Dashboard del cliente -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-600">Vehículos</p>
+                        <p class="text-2xl font-bold text-blue-800" x-text="clienteSeleccionado?.vehiculos_count || 0"></p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-green-600">Órdenes</p>
+                        <p class="text-2xl font-bold text-green-800" x-text="clienteSeleccionado?.ordenes_count || 0"></p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <p class="text-sm text-purple-600">Estado</p>
+                        <p class="text-lg font-bold" :class="clienteSeleccionado?.activo ? 'text-green-800' : 'text-gray-800'"
+                           x-text="clienteSeleccionado?.activo ? 'Activo' : 'Cancelado'"></p>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-6">
                     <div>
                         <h4 class="text-sm font-medium text-gray-500 mb-2">Información Personal</h4>
                         <div class="space-y-2">
-                            <p><span class="text-gray-600">RUT:</span> <span class="font-mono font-medium" x-text="clienteSeleccionado?.rut && formatearRUT(clienteSeleccionado.rut)"></span></p>
+                            <p><span class="text-gray-600">Documento:</span> <span class="font-mono font-medium" x-text="clienteSeleccionado?.documento"></span></p>
                             <p><span class="text-gray-600">Nombre:</span> <span x-text="clienteSeleccionado?.nombre"></span></p>
-                            <p><span class="text-gray-600">Apellido:</span> <span x-text="clienteSeleccionado?.apellido"></span></p>
-                            <p><span class="text-gray-600">Email:</span> <span x-text="clienteSeleccionado?.email"></span></p>
-                            <p><span class="text-gray-600">Teléfono:</span> <span x-text="clienteSeleccionado?.telefono"></span></p>
+                            <p><span class="text-gray-600"><i class="fas fa-envelope text-blue-500 mr-1"></i>Email:</span> <span x-text="clienteSeleccionado?.email"></span></p>
+                            <p><span class="text-gray-600"><i class="fas fa-phone text-blue-500 mr-1"></i>Teléfono:</span> <span x-text="clienteSeleccionado?.telefono"></span></p>
                         </div>
                     </div>
                     <div>
                         <h4 class="text-sm font-medium text-gray-500 mb-2">Dirección</h4>
                         <div class="space-y-2">
-                            <p><span class="text-gray-600">Dirección:</span> <span x-text="clienteSeleccionado?.direccion || 'No registrada'"></span></p>
-                            <p><span class="text-gray-600">Comuna:</span> <span x-text="clienteSeleccionado?.comuna || '-'"></span></p>
+                            <!-- HU-029: Icono de dirección -->
+                            <p><span class="text-gray-600"><i class="fas fa-map-pin text-blue-500 mr-1"></i>Dirección:</span> 
+                                <span x-text="clienteSeleccionado?.direccion || 'Sin dirección'"></span>
+                            </p>
                             <p><span class="text-gray-600">Ciudad:</span> <span x-text="clienteSeleccionado?.ciudad || '-'"></span></p>
                         </div>
                     </div>
                 </div>
 
+                <!-- HU-030: Última cita y última orden -->
+                <div class="mt-6 grid grid-cols-2 gap-4">
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="text-sm font-medium text-yellow-800 mb-2"><i class="fas fa-calendar mr-1"></i>Última Cita</h4>
+                        <template x-if="clienteSeleccionado?.ultima_cita">
+                            <div>
+                                <p class="text-sm text-yellow-900" x-text="'Fecha: ' + clienteSeleccionado.ultima_cita.fecha"></p>
+                                <p class="text-sm text-yellow-900" x-text="'Estado: ' + clienteSeleccionado.ultima_cita.estado"></p>
+                            </div>
+                        </template>
+                        <template x-if="!clienteSeleccionado?.ultima_cita">
+                            <p class="text-sm text-yellow-700">Sin citas registradas</p>
+                        </template>
+                    </div>
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <h4 class="text-sm font-medium text-indigo-800 mb-2"><i class="fas fa-tools mr-1"></i>Última Orden</h4>
+                        <template x-if="clienteSeleccionado?.ultima_orden">
+                            <div>
+                                <p class="text-sm text-indigo-900" x-text="'Código: ' + clienteSeleccionado.ultima_orden.codigo"></p>
+                                <p class="text-sm text-indigo-900" x-text="'Fecha: ' + clienteSeleccionado.ultima_orden.fecha"></p>
+                                <p class="text-sm text-indigo-900" x-text="'Estado: ' + clienteSeleccionado.ultima_orden.estado"></p>
+                            </div>
+                        </template>
+                        <template x-if="!clienteSeleccionado?.ultima_orden">
+                            <p class="text-sm text-indigo-700">Sin órdenes registradas</p>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- HU-020: Historial de servicios/órdenes -->
                 <div class="mt-6 border-t pt-4">
-                    <h4 class="text-sm font-medium text-gray-500 mb-3">Vehículos Registrados</h4>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-gray-600 text-sm" x-text="(clienteSeleccionado?.vehiculos_count || 0) + ' vehículo(s) registrado(s)'"></p>
+                    <h4 class="text-sm font-medium text-gray-500 mb-3"><i class="fas fa-history mr-1"></i>Historial de Servicios</h4>
+                    <div class="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto">
+                        <template x-if="clienteSeleccionado?.ordenes_servicio && clienteSeleccionado.ordenes_servicio.length > 0">
+                            <div class="space-y-2">
+                                <template x-for="orden in clienteSeleccionado.ordenes_servicio" :key="orden.id">
+                                    <div class="bg-white p-3 rounded border flex justify-between items-center">
+                                        <div>
+                                            <p class="font-medium text-gray-900" x-text="orden.codigo"></p>
+                                            <p class="text-sm text-gray-600" x-text="'Fecha: ' + orden.fecha"></p>
+                                            <template x-if="orden.vehiculo">
+                                                <p class="text-sm text-gray-600" x-text="orden.vehiculo.marca + ' ' + orden.vehiculo.modelo + ' (' + orden.vehiculo.patente + ')'"></p>
+                                            </template>
+                                        </div>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800" x-text="orden.estado"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!clienteSeleccionado?.ordenes_servicio || clienteSeleccionado.ordenes_servicio.length === 0">
+                            <p class="text-gray-600 text-sm">Este cliente no tiene servicios registrados</p>
+                        </template>
                     </div>
                 </div>
 
@@ -294,71 +469,112 @@ function clienteModule() {
     return {
         clientes: [],
         clientesFiltrados: [],
-        filtroBusqueda: '',
+        estadisticas: {
+            total_clientes: 0,
+            clientes_activos: 0,
+            clientes_nuevos_mes: 0
+        },
+        // HU-002/HU-003/HU-004: Filtros individuales
+        filtroNombre: '',
+        filtroEmail: '',
+        filtroTelefono: '',
         filtroEstado: '',
+        // HU-024: Filtro por fechas
+        fechaInicio: '',
+        fechaFin: '',
         modalAbierto: false,
         modalVerAbierto: false,
         modoEdicion: false,
         clienteSeleccionado: null,
+        usuarioRol: 'admin', // Simulado - debería venir del backend
         formulario: {
             id: null,
-            rut: '',
-            tipo_persona: 'natural',
+            documento: '',
             nombre: '',
-            apellido: '',
-            razon_social: '',
             email: '',
             telefono: '',
             direccion: '',
-            comuna: '',
             ciudad: '',
             activo: true
         },
         errores: {},
 
         init() {
+            this.cargarEstadisticas();
             this.cargarClientes();
         },
 
-        async cargarClientes() {
-            // Datos de ejemplo para desarrollo
-            this.clientes = [
-                { id: 1, rut: '11111111-1', nombre: 'Carlos', apellido: 'Pomaire', email: 'carlos.pomaire@email.cl', telefono: '+56 9 1234 5678', direccion: 'Av. Principal 123', comuna: 'Santiago', ciudad: 'Santiago', activo: true, vehiculos_count: 2 },
-                { id: 2, rut: '22222222-2', nombre: 'María', apellido: 'González', email: 'maria.gonzalez@email.cl', telefono: '+56 9 2345 6789', direccion: 'Calle Los Alerces 456', comuna: 'Providencia', ciudad: 'Santiago', activo: true, vehiculos_count: 1 },
-                { id: 3, rut: '33333333-3', nombre: 'Roberto', apellido: 'Sánchez', email: 'roberto.sanchez@email.cl', telefono: '+56 9 3456 7890', direccion: 'Pasaje El Roble 789', comuna: 'Las Condes', ciudad: 'Santiago', activo: true, vehiculos_count: 3 },
-                { id: 4, rut: '44444444-4', nombre: 'Ana', apellido: 'Pérez', email: 'ana.perez@email.cl', telefono: '+56 9 4567 8901', direccion: 'Av. Italia 321', comuna: 'Ñuñoa', ciudad: 'Santiago', activo: false, vehiculos_count: 0 },
-                { id: 5, rut: '55555555-5', nombre: 'Pedro', apellido: 'Ramírez', email: 'pedro.ramirez@email.cl', telefono: '+56 9 5678 9012', direccion: 'Calle Mapocho 654', comuna: 'Quilicura', ciudad: 'Santiago', activo: true, vehiculos_count: 1 }
-            ];
-            this.aplicarFiltros();
+        // HU-010: Cargar estadísticas
+        async cargarEstadisticas() {
+            try {
+                const response = await fetch('/api/clientes/stats');
+                const data = await response.json();
+                if (data.success) {
+                    this.estadisticas = data.data;
+                }
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+            }
         },
 
+        async cargarClientes() {
+            try {
+                const response = await fetch('/api/clientes');
+                const data = await response.json();
+                this.clientes = data.models || [];
+                this.aplicarFiltros();
+            } catch (error) {
+                console.error('Error cargando clientes:', error);
+                // Datos de ejemplo para desarrollo
+                this.clientes = [
+                    { id: 1, documento: '11111111-1', nombre: 'Carlos Pomaire', email: 'carlos.pomaire@email.cl', telefono: '+56 9 1234 5678', direccion: 'Av. Principal 123', ciudad: 'Santiago', activo: true, vehiculos_count: 2 },
+                    { id: 2, documento: '22222222-2', nombre: 'María González', email: 'maria.gonzalez@email.cl', telefono: '+56 9 2345 6789', direccion: 'Calle Los Alerces 456', ciudad: 'Santiago', activo: true, vehiculos_count: 1 },
+                    { id: 3, documento: '33333333-3', nombre: 'Roberto Sánchez', email: 'roberto.sanchez@email.cl', telefono: '+56 9 3456 7890', direccion: 'Pasaje El Roble 789', ciudad: 'Santiago', activo: true, vehiculos_count: 3 },
+                    { id: 4, documento: '44444444-4', nombre: 'Ana Pérez', email: 'ana.perez@email.cl', telefono: '+56 9 4567 8901', direccion: 'Av. Italia 321', ciudad: 'Santiago', activo: false, vehiculos_count: 0 },
+                    { id: 5, documento: '55555555-5', nombre: 'Pedro Ramírez', email: 'pedro.ramirez@email.cl', telefono: '+56 9 5678 9012', direccion: 'Calle Mapocho 654', ciudad: 'Santiago', activo: true, vehiculos_count: 1 }
+                ];
+                this.aplicarFiltros();
+            }
+        },
+
+        // HU-002/HU-003/HU-004/HU-011/HU-012/HU-024: Aplicar todos los filtros
         aplicarFiltros() {
             this.clientesFiltrados = this.clientes.filter(cliente => {
-                const coincideBusqueda = !this.filtroBusqueda || 
-                    cliente.rut.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) ||
-                    cliente.nombre.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) ||
-                    cliente.apellido.toLowerCase().includes(this.filtroBusqueda.toLowerCase()) ||
-                    cliente.email.toLowerCase().includes(this.filtroBusqueda.toLowerCase());
+                const coincideNombre = !this.filtroNombre || 
+                    cliente.nombre.toLowerCase().includes(this.filtroNombre.toLowerCase());
+                
+                const coincideEmail = !this.filtroEmail || 
+                    cliente.email.toLowerCase().includes(this.filtroEmail.toLowerCase());
+                
+                const coincideTelefono = !this.filtroTelefono || 
+                    cliente.telefono.includes(this.filtroTelefono);
                 
                 const coincideEstado = !this.filtroEstado || cliente.activo.toString() === this.filtroEstado;
                 
-                return coincideBusqueda && coincideEstado;
+                return coincideNombre && coincideEmail && coincideTelefono && coincideEstado;
             });
+        },
+
+        // HU-024: Limpiar filtros
+        limpiarFiltros() {
+            this.filtroNombre = '';
+            this.filtroEmail = '';
+            this.filtroTelefono = '';
+            this.filtroEstado = '';
+            this.fechaInicio = '';
+            this.fechaFin = '';
+            this.aplicarFiltros();
         },
 
         abrirModalCrear() {
             this.modoEdicion = false;
             this.formulario = {
                 id: null,
-                rut: '',
-                tipo_persona: 'natural',
+                documento: '',
                 nombre: '',
-                apellido: '',
-                razon_social: '',
                 email: '',
                 telefono: '',
                 direccion: '',
-                comuna: '',
                 ciudad: '',
                 activo: true
             };
@@ -377,6 +593,21 @@ function clienteModule() {
         verCliente(cliente) {
             this.clienteSeleccionado = cliente;
             this.modalVerAbierto = true;
+            // HU-020/HU-030: Cargar detalle completo con historial
+            this.cargarDetalleCliente(cliente.id);
+        },
+
+        // HU-020/HU-030: Cargar detalle completo del cliente
+        async cargarDetalleCliente(id) {
+            try {
+                const response = await fetch(`/api/clientes/${id}`);
+                const data = await response.json();
+                if (data.success) {
+                    this.clienteSeleccionado = data.data;
+                }
+            } catch (error) {
+                console.error('Error cargando detalle:', error);
+            }
         },
 
         cerrarModal() {
@@ -384,27 +615,27 @@ function clienteModule() {
             this.errores = {};
         },
 
-        validarRUT() {
-            const rut = this.formulario.rut.replace(/[.-]/g, '');
-            if (rut.length < 8) {
-                this.errores.rut = 'RUT inválido';
+        // HU-016: Validar formato de nombre (solo letras)
+        validarNombre() {
+            const nombre = this.formulario.nombre.trim();
+            const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+            if (!regex.test(nombre)) {
+                this.errores.nombre = 'El nombre solo debe contener letras y espacios';
                 return false;
             }
-            const cuerpo = rut.slice(0, -1);
-            const dv = rut.slice(-1).toUpperCase();
-            let suma = 0;
-            let multiplo = 2;
-            for (let i = cuerpo.length - 1; i >= 0; i--) {
-                suma += parseInt(cuerpo[i]) * multiplo;
-                multiplo = multiplo === 7 ? 2 : multiplo + 1;
-            }
-            const dvEsperado = 11 - (suma % 11);
-            const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
-            if (dv !== dvCalculado) {
-                this.errores.rut = 'RUT inválido';
+            this.errores.nombre = '';
+            return true;
+        },
+
+        // HU-017: Validar formato de teléfono internacional
+        validarTelefono() {
+            const telefono = this.formulario.telefono.trim();
+            const regex = /^\+?[0-9\s\-()]+$/;
+            if (telefono && !regex.test(telefono)) {
+                this.errores.telefono = 'El teléfono debe tener un formato válido (ej: +56 9 1234 5678)';
                 return false;
             }
-            this.errores.rut = '';
+            this.errores.telefono = '';
             return true;
         },
 
@@ -415,22 +646,44 @@ function clienteModule() {
             }
         },
 
-        formatearRUT(rut) {
-            if (!rut) return '';
-            const sinFormato = rut.replace(/[.-]/g, '');
-            const cuerpo = sinFormato.slice(0, -1);
-            const dv = sinFormato.slice(-1);
-            const cuerpoFormateado = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            return `${cuerpoFormateado}-${dv}`;
-        },
-
         obtenerIniciales(nombre) {
             if (!nombre) return '';
             return nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         },
 
+        // HU-015: Validar email único antes de guardar
+        async validarEmailUnico() {
+            const email = this.formulario.email.trim();
+            if (!email) return true;
+
+            try {
+                const response = await fetch(`/api/clientes?search_email=${encodeURIComponent(email)}`);
+                const data = await response.json();
+                const existentes = data.models || [];
+                
+                // Si hay resultados y no estamos editando el mismo cliente
+                if (existentes.length > 0 && (!this.modoEdicion || existentes[0].id !== this.formulario.id)) {
+                    this.errores.email = 'Este email ya está registrado';
+                    return false;
+                }
+                this.errores.email = '';
+                return true;
+            } catch (error) {
+                console.error('Error validando email:', error);
+                return true;
+            }
+        },
+
         async guardarCliente() {
-            if (!this.validarRUT()) return;
+            // HU-016: Validar nombre
+            if (!this.validarNombre()) return;
+            
+            // HU-017: Validar teléfono
+            if (!this.validarTelefono()) return;
+
+            // HU-015: Validar email único
+            const emailValido = await this.validarEmailUnico();
+            if (!emailValido) return;
             
             if (this.modoEdicion) {
                 // Actualizar cliente existente
@@ -448,10 +701,37 @@ function clienteModule() {
             this.cerrarModal();
         },
 
-        eliminarCliente(cliente) {
-            if (confirm(`¿Está seguro que desea eliminar al cliente ${cliente.nombre} ${cliente.apellido}?`)) {
-                this.clientes = this.clientes.filter(c => c.id !== cliente.id);
-                this.aplicarFiltros();
+        // HU-007/HU-025: Desactivar cliente (soft delete)
+        async desactivarCliente(cliente) {
+            if (confirm(`¿Está seguro que desea desactivar al cliente ${cliente.nombre}?`)) {
+                try {
+                    const response = await fetch(`/api/clientes/${cliente.id}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        cliente.activo = false;
+                        this.aplicarFiltros();
+                    }
+                } catch (error) {
+                    console.error('Error desactivando cliente:', error);
+                    alert('Error al desactivar el cliente');
+                }
+            }
+        },
+
+        // HU-008: Ver vehículos del cliente
+        verVehiculos(cliente) {
+            alert(`Mostrando vehículos de ${cliente.nombre}\nTotal: ${cliente.vehiculos_count || 0} vehículo(s)`);
+            // Aquí se implementaría la navegación a la vista de vehículos filtrada por cliente
+        },
+
+        // HU-021: Exportar a CSV
+        async exportarCSV() {
+            try {
+                window.location.href = '/api/clientes/export';
+            } catch (error) {
+                console.error('Error exportando:', error);
             }
         }
     }
