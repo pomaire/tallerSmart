@@ -24,7 +24,7 @@ composer.lock
 .DS_Store
 Thumbs.db
 
-# Yii-specific
+# Yii framework specific
 runtime/
 web/assets/
 ```
