@@ -29,6 +29,9 @@ COPY . /var/www/html/
 # Configurar Git para aceptar el directorio como seguro
 RUN git config --global --add safe.directory /var/www/html
 
+# Establecer APP_ENV para la construcción
+ENV APP_ENV=dev
+
 # Instalar dependencias con Composer
 RUN composer update --optimize-autoloader --no-interaction --no-scripts
 
