@@ -135,4 +135,17 @@ final class Usuario extends ActiveRecord
         $this->bloqueadoHasta = $bloqueadoHasta->format('Y-m-d H:i:s');
         $this->save(false);
     }
+    
+    /**
+     * Verifica si el usuario es administrador
+     */
+    public function esAdministrador(): bool
+    {
+        if (!$this->rolId) {
+            return false;
+        }
+        
+        $rol = $this->rol;
+        return $rol && in_array(strtolower($rol->nombre), ['administrador', 'admin', 'superadmin']);
+    }
 }
