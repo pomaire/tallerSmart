@@ -24,6 +24,7 @@ services:
       - ./:/var/www/html
       - vendor_data:/var/www/html/vendor
       - ./logs:/var/www/html/logs
+      - ./.env:/var/www/html/.env
     working_dir: /var/www/html
     depends_on:
       mysql:
