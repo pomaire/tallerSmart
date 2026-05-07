@@ -23,5 +23,22 @@ RUN usermod -u 1000 www-data
 
 WORKDIR /var/www/html
 
+# Copiar archivos de la aplicación
+COPY . /var/www/html/
+
+# Instalar dependencias con Composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Ejecutar migraciones (si existen)
+RUN if [ -d "migrations" ] && [ "$(ls -A migrations/*.php 2>/dev/null)" ]; then \
+        php yii migrate --interactive=0 || true; \
+    fi
+
+# Configurar permisos
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/runtime \
+    && chmod -R 755 /var/www/html/web
+
 EXPOSE 9000
+
 CMD ["php-fpm"]
