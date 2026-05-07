@@ -77,6 +77,11 @@ return [
                 'GET /dashboard' => 'dashboard/index',
                 'GET /dashboard/refresh-all' => 'dashboard/refresh-all',
                 'GET /dashboard/refresh-kpi' => 'dashboard/refresh-kpi',
+                
+                // Autenticación web
+                'GET /site/login' => 'site/login',
+                'POST /site/login' => 'site/login',
+                'GET /site/logout' => 'site/logout',
 
                 // Reglas para API REST
                 'POST api/auth/login' => 'api/auth/login',
