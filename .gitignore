@@ -1,88 +1,56 @@
 ```
-# Dependencies
-vendor/
+# Docker specific
+.dockerenv
+docker-compose.override.yml
 
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment
+# Environment variables
 .env
 .env.local
 .env.*
 
-# Docker
-.dockerignore
-!docker/php/Dockerfile
+# Logs
+*.log
 
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-dist/
-build/
-*.class
-*.jar
-target/
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
-# Editors
-.vscode/
-.idea/
+# Temporary files
+*.tmp
 *.swp
 *.swo
 
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Python specific
-*.pyc
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-
-# Node.js specific
+# Dependencies and build artifacts
 node_modules/
-
-# Java specific
-.gradle/
-build/
-*.class
-*.jar
-target/
-
-# Compression files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/
+.svn/
+.hg/
+ CVS/
+RCS/
+SCCS/
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 ```
