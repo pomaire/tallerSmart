@@ -447,3 +447,55 @@ CREATE TABLE IF NOT EXISTS orden_servicio_historial (
     INDEX idx_orden_servicio (orden_servicio_id),
     INDEX idx_fecha_cambio (fecha_cambio)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLAS PARA MÓDULO DE PAGOS (HU-010, HU-019, HU-024)
+-- ============================================
+
+-- Tabla: documento_tributario (Boletas, Notas de Crédito, Facturas)
+CREATE TABLE IF NOT EXISTS documento_tributario (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo ENUM('boleta', 'nota_credito', 'factura') NOT NULL,
+    folio VARCHAR(50) NOT NULL UNIQUE,
+    folio_sii INT,
+    orden_servicio_id INT,
+    cliente_id INT NOT NULL,
+    usuario_id INT,
+    monto_neto DECIMAL(10,2) DEFAULT 0,
+    iva DECIMAL(10,2) DEFAULT 0,
+    monto_total DECIMAL(10,2) NOT NULL,
+    estado ENUM('borrador', 'pendiente_sii', 'emitido', 'anulado', 'fallido') DEFAULT 'borrador',
+    estado_cola ENUM('pendiente', 'procesando', 'completado', 'fallido') DEFAULT 'pendiente',
+    intentos_envio INT DEFAULT 0,
+    rut_emisor VARCHAR(50),
+    rut_receptor VARCHAR(50),
+    razon_social_receptor VARCHAR(200),
+    fecha_emision DATETIME,
+    fecha_timbraje DATETIME,
+    datos_sii JSON,
+    codigo_barras VARCHAR(255),
+    hash_documento VARCHAR(255),
+    observaciones TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orden_servicio_id) REFERENCES orden_servicio(id) ON DELETE SET NULL,
+    FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE SET NULL,
+    INDEX idx_folio (folio),
+    INDEX idx_estado (estado),
+    INDEX idx_tipo (tipo),
+    INDEX idx_orden_servicio (orden_servicio_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Actualizar tabla pago para agregar campos faltantes
+ALTER TABLE pago 
+ADD COLUMN IF NOT EXISTS cliente_id INT AFTER ordenId,
+ADD COLUMN IF NOT EXISTS estado ENUM('pendiente', 'aprobado', 'rechazado', 'anulado', 'reembolsado') DEFAULT 'pendiente' AFTER metodoPago,
+ADD COLUMN IF NOT EXISTS referencia_tarjeta VARCHAR(100) AFTER referencia,
+ADD COLUMN IF NOT EXISTS folio VARCHAR(50) AFTER id,
+ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at,
+ADD FOREIGN KEY IF NOT EXISTS (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE;
+
+-- Índices para mejorar rendimiento en consultas de pagos
+CREATE INDEX IF NOT EXISTS idx_pago_estado ON pago(estado);
+CREATE INDEX IF NOT EXISTS idx_pago_metodo ON pago(metodo_pago);
+CREATE INDEX IF NOT EXISTS idx_pago_fecha ON pago(fecha_pago);
