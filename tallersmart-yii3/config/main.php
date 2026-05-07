@@ -11,8 +11,6 @@ return [
     'controllerNamespace' => 'app\\controllers\\web',
     'bootstrap' => ['log'],
     'aliases' => [
-        '@bower' => '@vendor/bower-asset',
-        '@npm'   => '@vendor/npm-asset',
         '@webroot' => '@app/web',
         '@runtime' => '@app/runtime',
     ],
