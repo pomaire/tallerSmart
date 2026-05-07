@@ -26,19 +26,27 @@ WORKDIR /var/www/html
 # Copiar archivos de la aplicación
 COPY . /var/www/html/
 
+# Configurar Git para aceptar el directorio como seguro
+RUN git config --global --add safe.directory /var/www/html
+
 # Instalar dependencias con Composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer update --optimize-autoloader --no-interaction --no-scripts
 
 # Ejecutar migraciones (si existen)
 RUN if [ -d "migrations" ] && [ "$(ls -A migrations/*.php 2>/dev/null)" ]; then \
         php yii migrate --interactive=0 || true; \
     fi
 
-# Configurar permisos
-RUN mkdir -p /var/www/html/runtime \
+# Configurar permisos y directorios necesarios
+RUN mkdir -p /var/www/html/runtime/cache \
+    && mkdir -p /var/www/html/runtime/logs \
+    && mkdir -p /var/www/html/public/assets \
+    && mkdir -p /var/www/html/web/assets \
     && chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/runtime \
-    && chmod -R 755 /var/www/html/web
+    && chmod -R 775 /var/www/html/runtime \
+    && chmod -R 775 /var/www/html/public \
+    && chmod -R 775 /var/www/html/public/assets \
+    && chmod -R 775 /var/www/html/web/assets
 
 EXPOSE 9000
 

@@ -13,6 +13,8 @@ return [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        '@webroot' => '@app/web',
+        '@runtime' => '@app/runtime',
     ],
     'components' => [
         'cache' => [
@@ -35,6 +37,12 @@ return [
             'class' => 'yii\symfonymailer\Mailer',
             'viewPath' => '@app/mail',
             'useFileTransport' => true,
+        ],
+        
+        'assetManager' => [
+            'basePath' => '@webroot/assets',
+            'baseUrl' => '/assets',
+            'linkAssets' => false,
         ],
         
         'log' => [
@@ -141,8 +149,5 @@ return [
         ],
     ],
     
-    'params' => [
-        'adminEmail' => 'admin@tallersmart.com',
-        'supportEmail' => 'soporte@tallersmart.com',
-    ],
+    'params' => require __DIR__ . '/params.php',
 ];
