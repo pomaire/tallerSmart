@@ -19,6 +19,8 @@ venv/
 .env.local
 .env.*
 
+vendor/
+
 # Build directories
 dist/
 build/
