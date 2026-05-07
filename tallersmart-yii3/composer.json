@@ -39,6 +39,7 @@
         "psr/http-server-middleware": "^1.0.2",
         "psr/log": "^3.0.2",
         "symfony/console": "^7.4.9 || ^8.0.6",
+        "yidas/yii2-bower-asset": "2.0.13.1",
         "yiisoft/aliases": "^3.1.1",
         "yiisoft/config": "^1.6.2",
         "yiisoft/data": "^2.0.0",
@@ -60,7 +61,8 @@
         "yiisoft/yii-console": "^2.4.2",
         "yiisoft/yii-http": "^1.1.1",
         "yiisoft/yii-runner-console": "^2.2.1",
-        "yiisoft/yii-runner-http": "^3.2.1"
+        "yiisoft/yii-runner-http": "^3.2.1",
+        "yiisoft/yii2": "*"
     },
     "require-dev": {
         "vlucas/phpdotenv": "^5.6.3",
@@ -106,7 +108,8 @@
             "codeception/c3": true,
             "composer/package-versions-deprecated": true,
             "infection/extension-installer": true,
-            "yiisoft/config": true
+            "yiisoft/config": true,
+            "yiisoft/yii2-composer": true
         }
     }
 }
