@@ -5,7 +5,7 @@ vendor/
 # Logs
 *.log
 
-# Environment
+# Environment specific
 .env
 .env.local
 .env.*
@@ -19,6 +19,16 @@ vendor/
 Thumbs.db
 
 # Tests
-.phpunit.result.cache
+.coverage
 coverage/
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.o
+*.obj
+*.so
+*.dll
+*.exe
 ```
