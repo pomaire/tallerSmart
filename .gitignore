@@ -1,31 +1,42 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-
 # Dependencies
 vendor/
-node_modules/
-composer.lock
 
-# Logs and temp files
+# Runtime
+runtime/
+logs/
 *.log
-*.tmp
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
-# Editors
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS generated files
+# OS
 .DS_Store
 Thumbs.db
 
-# Yii-specific
-runtime/
-web/assets/
+# Tests
+.coverage
+coverage/
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.pyc
+__pycache__/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
 ```
