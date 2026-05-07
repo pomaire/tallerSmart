@@ -58,13 +58,19 @@ return [
             'enableStrictParsing' => false,
             'showScriptName' => false,
             'rules' => [
+                // Reglas para vistas web del dashboard
+                'GET /' => 'dashboard/index',
+                'GET /dashboard' => 'dashboard/index',
+                'GET /dashboard/refresh-all' => 'dashboard/refresh-all',
+                'GET /dashboard/refresh-kpi' => 'dashboard/refresh-kpi',
+
                 // Reglas para API REST
                 'POST api/auth/login' => 'api/auth/login',
                 'POST api/auth/logout' => 'api/auth/logout',
                 'GET api/auth/me' => 'api/auth/me',
                 'POST api/auth/change-password' => 'api/auth/change-password',
                 
-                // Dashboard
+                // Dashboard API
                 'GET api/dashboard/stats' => 'api/dashboard/stats',
                 'GET api/dashboard/proximas-citas' => 'api/dashboard/proximas-citas',
                 'GET api/dashboard/ordenes-recientes' => 'api/dashboard/ordenes-recientes',
