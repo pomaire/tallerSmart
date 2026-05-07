@@ -2,52 +2,41 @@
 
 namespace app\controllers\web;
 
-use Yii;
-use yii\web\Controller;
-use yii\filters\AccessControl;
+use Yiisoft\Yii\Http\Controller;
+use Yiisoft\Router\UrlGeneratorInterface;
+use Yiisoft\Session\SessionInterface;
+use Yiisoft\Validator\ValidatorInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Yiisoft\View\ViewContextInterface;
+use Yiisoft\Yii\Http\Exception\ForbiddenException;
 
 /**
  * Controlador base para todas las vistas web del frontend
  * Maneja autenticación, permisos y layout común
  */
-class BaseController extends Controller
+class BaseController extends Controller implements ViewContextInterface
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function behaviors()
-    {
-        return [
-            'access' => [
-                'class' => AccessControl::class,
-                'rules' => [
-                    [
-                        'actions' => ['login', 'error'],
-                        'allow' => true,
-                    ],
-                    [
-                        'actions' => ['logout', 'index', 'view', 'create', 'update', 'delete'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
-        ];
+    protected SessionInterface $session;
+    protected ValidatorInterface $validator;
+    
+    public function __construct(
+        string $id,
+        UrlGeneratorInterface $urlGenerator,
+        SessionInterface $session,
+        ValidatorInterface $validator
+    ) {
+        $this->session = $session;
+        $this->validator = $validator;
+        parent::__construct($id, $urlGenerator);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function beforeAction($action)
+    public function getViewPath(): string
     {
-        if (!parent::beforeAction($action)) {
-            return false;
-        }
-
-        // Configurar layout por defecto para todas las vistas web
-        $this->layout = 'main';
-
-        return true;
+        return dirname(__DIR__, 2) . '/views/' . str_replace('\\', '/', $this->getControllerId());
     }
 
     /**
@@ -55,17 +44,6 @@ class BaseController extends Controller
      */
     protected function auditLog(string $accion, string $descripcion, ?int $registroId = null): void
     {
-        $usuario = Yii::$app->user->identity;
-        if ($usuario) {
-            \app\models\AuditLog::create([
-                'usuario_id' => $usuario->id,
-                'accion' => $accion,
-                'descripcion' => $descripcion,
-                'tabla_afectada' => $this->id,
-                'registro_id' => $registroId,
-                'ip' => Yii::$app->request->userIP,
-                'user_agent' => Yii::$app->request->userAgent,
-            ]);
-        }
+        // Implementación pendiente - depende del sistema de logging de Yii3
     }
 }
