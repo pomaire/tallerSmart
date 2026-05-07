@@ -2,56 +2,507 @@
 {% block title %}AuditLog - TallerSmart{% endblock %}
 {% block content %}
 <div class="audit-log-page" x-data="auditLogApp()">
+    <!-- Header -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
         <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <i class="fas fa-shield-alt text-purple-600"></i>Auditoría del Sistema
         </h1>
         <p class="text-sm text-gray-600 mt-2">Registro inmutable de acciones críticas</p>
     </div>
+
+    <!-- Filtros -->
     <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div class="grid grid-cols-5 gap-4">
-            <select x-model="filtros.usuario_id" class="border-gray-300 rounded"><option value="">Usuario</option></select>
-            <select x-model="filtros.entidad" class="border-gray-300 rounded"><option value="">Entidad</option><option value="usuario">Usuarios</option><option value="cliente">Clientes</option><option value="orden_servicio">Órdenes</option></select>
-            <select x-model="filtros.accion" class="border-gray-300 rounded"><option value="">Acción</option><option value="CREATE">Crear</option><option value="UPDATE">Actualizar</option><option value="DELETE">Eliminar</option></select>
-            <input type="date" x-model="filtros.fecha_desde" class="border-gray-300 rounded" placeholder="Desde">
-            <input type="date" x-model="filtros.fecha_hasta" class="border-gray-300 rounded" placeholder="Hasta">
+        <div class="grid grid-cols-6 gap-4">
+            <select x-model="filtros.usuario_id" class="border-gray-300 rounded text-sm">
+                <option value="">Todos los usuarios</option>
+                <template x-for="u in usuarios" :key="u.id">
+                    <option :value="u.id" x-text="u.nombre"></option>
+                </template>
+            </select>
+            <select x-model="filtros.entidad" class="border-gray-300 rounded text-sm">
+                <option value="">Todas las entidades</option>
+                <option value="usuario">Usuarios</option>
+                <option value="cliente">Clientes</option>
+                <option value="orden_servicio">Órdenes de Servicio</option>
+                <option value="cita">Citas</option>
+                <option value="vehiculo">Vehículos</option>
+                <option value="servicio">Servicios</option>
+                <option value="categoria">Categorías</option>
+                <option value="inventario">Inventario</option>
+            </select>
+            <select x-model="filtros.accion" class="border-gray-300 rounded text-sm">
+                <option value="">Todas las acciones</option>
+                <option value="CREATE">Crear</option>
+                <option value="UPDATE">Actualizar</option>
+                <option value="DELETE">Eliminar</option>
+                <option value="LOGIN">Login</option>
+                <option value="LOGIN_FAILED">Login Fallido</option>
+                <option value="EXPORT">Exportar</option>
+                <option value="IMPORT">Importar</option>
+                <option value="ROLLBACK">Rollback</option>
+                <option value="ALERTA_SENSIBLE">Alerta Sensible</option>
+                <option value="API_REQUEST">API Request</option>
+            </select>
+            <input type="text" x-model="filtros.busqueda" placeholder="Buscar en datos..." class="border-gray-300 rounded text-sm">
+            <input type="date" x-model="filtros.fecha_desde" class="border-gray-300 rounded text-sm" title="Fecha desde">
+            <input type="date" x-model="filtros.fecha_hasta" class="border-gray-300 rounded text-sm" title="Fecha hasta">
+        </div>
+        <div class="flex gap-2 mt-4">
+            <button @click="cargarLogs()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm">
+                <i class="fas fa-search mr-2"></i>Filtrar
+            </button>
+            <button @click="exportarCSV()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                <i class="fas fa-download mr-2"></i>Exportar CSV
+            </button>
+            <button @click="verReporteActividad()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                <i class="fas fa-chart-bar mr-2"></i>Reporte Actividad
+            </button>
+            <button @click="resetFiltros()" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 text-sm">
+                <i class="fas fa-undo mr-2"></i>Limpiar
+            </button>
         </div>
     </div>
+
+    <!-- Tabla de logs -->
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Fecha</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Usuario</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Acción</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Entidad</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">IP</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Detalle</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entidad</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duración</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
+                <template x-if="cargando">
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
+                        </td>
+                    </tr>
+                </template>
+                <template x-if="!cargando && logs.length === 0">
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            No se encontraron registros
+                        </td>
+                    </tr>
+                </template>
                 <template x-for="log in logs" :key="log.id">
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm" x-text="new Date(log.fecha_creacion).toLocaleString('es-CL')"></td>
-                        <td class="px-4 py-3 text-sm" x-text="log.usuario_nombre"></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded" :class="{'bg-green-100 text-green-800':log.accion==='CREATE','bg-blue-100 text-blue-800':log.accion==='UPDATE','bg-red-100 text-red-800':log.accion==='DELETE'}" x-text="log.accion"></span></td>
-                        <td class="px-4 py-3 text-sm"><span x-text="log.entidad_tipo"></span>#<span x-text="log.entidad_id"></span></td>
-                        <td class="px-4 py-3 text-sm font-mono" x-text="log.ip"></td>
-                        <td class="px-4 py-3 text-right"><button @click="verDetalle(log)" class="text-blue-600 hover:text-blue-900">Ver</button></td>
+                        <td class="px-4 py-3 text-sm" x-text="formatearFecha(log.fecha_creacion)"></td>
+                        <td class="px-4 py-3 text-sm">
+                            <span x-text="log.usuario_nombre"></span>
+                            <span x-show="log.usuario_id === null" class="text-gray-400">(Sistema)</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs rounded font-medium"
+                                :class="{
+                                    'bg-green-100 text-green-800': log.accion === 'CREATE',
+                                    'bg-blue-100 text-blue-800': log.accion === 'UPDATE',
+                                    'bg-red-100 text-red-800': log.accion === 'DELETE',
+                                    'bg-yellow-100 text-yellow-800': log.accion === 'LOGIN' || log.accion === 'LOGOUT',
+                                    'bg-orange-100 text-orange-800': log.accion === 'LOGIN_FAILED',
+                                    'bg-purple-100 text-purple-800': log.accion === 'EXPORT' || log.accion === 'IMPORT',
+                                    'bg-pink-100 text-pink-800': log.accion === 'ALERTA_SENSIBLE',
+                                    'bg-indigo-100 text-indigo-800': log.accion === 'API_REQUEST',
+                                    'bg-gray-100 text-gray-800': ['ROLLBACK', 'READ'].includes(log.accion)
+                                }"
+                                x-text="log.accion">
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="font-medium" x-text="log.entidad"></span>
+                            <span x-show="log.entidad_id" class="text-gray-500">#<span x-text="log.entidad_id"></span></span>
+                        </td>
+                        <td class="px-4 py-3 text-sm font-mono text-xs" x-text="log.ip || '-'"></td>
+                        <td class="px-4 py-3 text-sm text-gray-500" x-text="log.duracion_ms ? log.duracion_ms + ' ms' : '-'"></td>
+                        <td class="px-4 py-3 text-right">
+                            <button @click="verDetalle(log)" class="text-blue-600 hover:text-blue-900 text-sm mr-2" title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button @click="verDiff(log)" class="text-purple-600 hover:text-purple-900 text-sm mr-2" title="Ver cambios">
+                                <i class="fas fa-code-branch"></i>
+                            </button>
+                            <button @click="verTimeline(log.entidad, log.entidad_id)" class="text-green-600 hover:text-green-900 text-sm" title="Ver timeline"
+                                x-show="log.entidad && log.entidad_id">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        </td>
                     </tr>
                 </template>
             </tbody>
         </table>
     </div>
-    <div x-show="modalDetalle" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-4xl">
-            <h3 class="text-xl font-bold mb-4">Detalle de Auditoría</h3>
-            <pre class="bg-gray-900 text-green-400 p-4 rounded" x-text="logSeleccionado?.cambios_json"></pre>
-            <button @click="modalDetalle=false" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cerrar</button>
+
+    <!-- Paginación -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mt-4 flex justify-between items-center">
+        <span class="text-sm text-gray-600">Mostrando <span x-text="logs.length"></span> de <span x-text="total"></span> registros</span>
+        <div class="flex gap-2">
+            <button @click="pagina = Math.max(1, pagina - 1); cargarLogs()" :disabled="pagina <= 1"
+                class="px-3 py-1 border rounded text-sm disabled:opacity-50">Anterior</button>
+            <span class="px-3 py-1 text-sm" x-text="'Página ' + pagina"></span>
+            <button @click="pagina++; cargarLogs()" :disabled="logs.length < pageSize"
+                class="px-3 py-1 border rounded text-sm disabled:opacity-50">Siguiente</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalle -->
+    <div x-show="modalDetalle" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-file-alt text-purple-600"></i>Detalle de Auditoría
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <p class="text-sm text-gray-500">Fecha</p>
+                    <p class="font-medium" x-text="logSeleccionado?.fecha_creacion"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Usuario</p>
+                    <p class="font-medium" x-text="logSeleccionado?.usuario_nombre"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Acción</p>
+                    <p class="font-medium" x-text="logSeleccionado?.accion"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Entidad</p>
+                    <p class="font-medium" x-text="logSeleccionado?.entidad + (logSeleccionado?.entidad_id ? '#' + logSeleccionado.entidad_id : '')"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">IP</p>
+                    <p class="font-medium font-mono text-sm" x-text="logSeleccionado?.ip || '-'"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Módulo</p>
+                    <p class="font-medium" x-text="logSeleccionado?.modulo"></p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-semibold mb-2">Datos Antiguos:</h4>
+                <pre class="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40" x-text="JSON.stringify(logSeleccionado?.datos_antiguos, null, 2) || 'N/A'"></pre>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-semibold mb-2">Datos Nuevos:</h4>
+                <pre class="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40" x-text="JSON.stringify(logSeleccionado?.datos_nuevos, null, 2) || 'N/A'"></pre>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button @click="rollback(logSeleccionado)" 
+                    x-show="['UPDATE', 'DELETE'].includes(logSeleccionado?.accion)"
+                    class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+                    <i class="fas fa-undo mr-2"></i>Rollback
+                </button>
+                <button @click="modalDetalle=false" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Diff -->
+    <div x-show="modalDiff" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-code-branch text-purple-600"></i>Cambios Detectados
+            </h3>
+            <div x-show="diffSeleccionado?.campos_modificados && Object.keys(diffSeleccionado.campos_modificados).length > 0">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-3 py-2 text-left">Campo</th>
+                            <th class="px-3 py-2 text-left">Valor Anterior</th>
+                            <th class="px-3 py-2 text-left">Valor Nuevo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(cambio, campo) in diffSeleccionado?.campos_modificados" :key="campo">
+                            <tr class="border-b">
+                                <td class="px-3 py-2 font-medium" x-text="campo"></td>
+                                <td class="px-3 py-2 text-red-600" x-text="JSON.stringify(cambio.anterior)"></td>
+                                <td class="px-3 py-2 text-green-600" x-text="JSON.stringify(cambio.nuevo)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div x-show="!diffSeleccionado?.campos_modificados || Object.keys(diffSeleccionado.campos_modificados).length === 0"
+                class="text-center text-gray-500 py-8">
+                No hay cambios detectados
+            </div>
+            <div class="flex justify-end mt-4">
+                <button @click="modalDiff=false" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Timeline -->
+    <div x-show="modalTimeline" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-history text-green-600"></i>Timeline de Cambios
+            </h3>
+            <div class="relative">
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                <template x-for="(evento, index) in timeline" :key="index">
+                    <div class="relative pl-10 pb-6">
+                        <div class="absolute left-2 w-4 h-4 rounded-full bg-green-500 border-2 border-white"></div>
+                        <div class="bg-gray-50 rounded p-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-medium" x-text="evento.accion"></span>
+                                    <span class="text-sm text-gray-500 ml-2" x-text="formatearFecha(evento.fecha)"></span>
+                                </div>
+                                <span class="text-sm text-gray-600" x-text="evento.usuario"></span>
+                            </div>
+                            <div x-show="evento.diff && evento.diff.campos_modificados" class="mt-2 text-xs">
+                                <span class="text-gray-500">Cambios: </span>
+                                <span class="text-purple-600" x-text="Object.keys(evento.diff.campos_modificados).join(', ')"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button @click="modalTimeline=false" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reporte Actividad -->
+    <div x-show="modalReporte" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-chart-bar text-blue-600"></i>Reporte de Actividad
+            </h3>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Período</label>
+                <select x-model="reportePeriodo" @change="cargarReporteActividad()" class="border-gray-300 rounded">
+                    <option value="dia">Por día</option>
+                    <option value="semana">Por semana</option>
+                    <option value="mes">Por mes</option>
+                </select>
+            </div>
+            <div x-show="reporteActividad.length > 0">
+                <h4 class="font-semibold mb-2">Actividad por fecha:</h4>
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-3 py-2 text-left">Fecha</th>
+                            <th class="px-3 py-2 text-left">Acción</th>
+                            <th class="px-3 py-2 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="item in reporteActividad" :key="item.fecha + item.accion">
+                            <tr class="border-b">
+                                <td class="px-3 py-2" x-text="item.fecha"></td>
+                                <td class="px-3 py-2">
+                                    <span class="px-2 py-1 text-xs rounded" 
+                                        :class="{
+                                            'bg-green-100 text-green-800': item.accion === 'CREATE',
+                                            'bg-blue-100 text-blue-800': item.accion === 'UPDATE',
+                                            'bg-red-100 text-red-800': item.accion === 'DELETE'
+                                        }"
+                                        x-text="item.accion"></span>
+                                </td>
+                                <td class="px-3 py-2 text-right" x-text="item.total"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div x-show="resumenUsuarios.length > 0" class="mt-6">
+                <h4 class="font-semibold mb-2">Top usuarios:</h4>
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-3 py-2 text-left">Usuario</th>
+                            <th class="px-3 py-2 text-right">Total</th>
+                            <th class="px-3 py-2 text-right">Creaciones</th>
+                            <th class="px-3 py-2 text-right">Actualizaciones</th>
+                            <th class="px-3 py-2 text-right">Eliminaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="u in resumenUsuarios" :key="u.usuario_id">
+                            <tr class="border-b">
+                                <td class="px-3 py-2" x-text="u.usuario_nombre || 'N/A'"></td>
+                                <td class="px-3 py-2 text-right font-medium" x-text="u.total_acciones"></td>
+                                <td class="px-3 py-2 text-right text-green-600" x-text="u.creaciones"></td>
+                                <td class="px-3 py-2 text-right text-blue-600" x-text="u.actualizaciones"></td>
+                                <td class="px-3 py-2 text-right text-red-600" x-text="u.eliminaciones"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button @click="modalReporte=false" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
+
 <script>
-document.addEventListener('alpine:init',()=>{Alpine.data('auditLogApp',()=>({logs:[],filtros:{usuario_id:'',entidad:'',accion:'',fecha_desde:'',fecha_hasta:''},pagina:1,modalDetalle:false,logSeleccionado:null,async init(){await this.cargarLogs()},async cargarLogs(){const p=new URLSearchParams({page:this.pagina,...this.filtros});const r=await fetch('/api/audit-log?'+p);const d=await r.json();this.logs=d.items||[]},verDetalle(l){this.logSeleccionado=l;this.modalDetalle=true}}))});
+document.addEventListener('alpine:init', () => {
+    Alpine.data('auditLogApp', () => ({
+        logs: [],
+        usuarios: [],
+        filtros: {
+            usuario_id: '',
+            entidad: '',
+            accion: '',
+            busqueda: '',
+            fecha_desde: '',
+            fecha_hasta: ''
+        },
+        pagina: 1,
+        pageSize: 50,
+        total: 0,
+        cargando: false,
+        modalDetalle: false,
+        modalDiff: false,
+        modalTimeline: false,
+        modalReporte: false,
+        logSeleccionado: null,
+        diffSeleccionado: null,
+        timeline: [],
+        reporteActividad: [],
+        resumenUsuarios: [],
+        reportePeriodo: 'semana',
+
+        async init() {
+            await this.cargarUsuarios();
+            await this.cargarLogs();
+        },
+
+        async cargarUsuarios() {
+            try {
+                const r = await fetch('/api/usuario?pageSize=100');
+                const d = await r.json();
+                this.usuarios = d.items || [];
+            } catch (e) {
+                console.error('Error cargando usuarios:', e);
+            }
+        },
+
+        async cargarLogs() {
+            this.cargando = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.pagina,
+                    pageSize: this.pageSize,
+                    ...this.filtros
+                });
+                const r = await fetch('/api/audit-log?' + params);
+                const d = await r.json();
+                this.logs = d.items || [];
+                this.total = d.total || 0;
+            } catch (e) {
+                console.error('Error cargando logs:', e);
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        resetFiltros() {
+            this.filtros = {
+                usuario_id: '',
+                entidad: '',
+                accion: '',
+                busqueda: '',
+                fecha_desde: '',
+                fecha_hasta: ''
+            };
+            this.pagina = 1;
+            this.cargarLogs();
+        },
+
+        verDetalle(log) {
+            this.logSeleccionado = log;
+            this.modalDetalle = true;
+        },
+
+        verDiff(log) {
+            this.diffSeleccionado = log.cambios_json || { campos_modificados: {}, total_cambios: 0 };
+            this.modalDiff = true;
+        },
+
+        async verTimeline(entidad, registroId) {
+            if (!entidad || !registroId) return;
+            try {
+                const r = await fetch(`/api/audit-log/timeline?entidad=${entidad}&registroId=${registroId}`);
+                const d = await r.json();
+                this.timeline = d.timeline || [];
+                this.modalTimeline = true;
+            } catch (e) {
+                console.error('Error cargando timeline:', e);
+            }
+        },
+
+        async rollback(log) {
+            if (!confirm('¿Está seguro de realizar rollback? Esta acción quedará registrada.')) return;
+            try {
+                const r = await fetch(`/api/audit-log/rollback?id=${log.id}`, { method: 'POST' });
+                const d = await r.json();
+                if (d.success) {
+                    alert('Rollback registrado correctamente');
+                    this.modalDetalle = false;
+                    this.cargarLogs();
+                } else {
+                    alert('Error: ' + (d.message || 'No se pudo realizar el rollback'));
+                }
+            } catch (e) {
+                console.error('Error en rollback:', e);
+                alert('Error al realizar rollback');
+            }
+        },
+
+        exportarCSV() {
+            const params = new URLSearchParams({
+                ...this.filtros
+            });
+            window.location.href = '/api/audit-log/export?' + params;
+        },
+
+        async verReporteActividad() {
+            this.modalReporte = true;
+            await this.cargarReporteActividad();
+        },
+
+        async cargarReporteActividad() {
+            try {
+                const params = new URLSearchParams({
+                    periodo: this.reportePeriodo,
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta
+                });
+                const r = await fetch('/api/audit-log/reporte-actividad?' + params);
+                const d = await r.json();
+                this.reporteActividad = d.actividad || [];
+                this.resumenUsuarios = d.resumen_usuarios || [];
+            } catch (e) {
+                console.error('Error cargando reporte:', e);
+            }
+        },
+
+        formatearFecha(fecha) {
+            if (!fecha) return '';
+            return new Date(fecha).toLocaleString('es-CL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }));
+});
 </script>
 {% endblock %}

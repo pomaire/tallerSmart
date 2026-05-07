@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS login_attempt (
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     usuarioId INT,
-    accion ENUM('CREATE', 'READ', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'EXPORT', 'IMPORT') NOT NULL,
+    accion ENUM('CREATE', 'READ', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'EXPORT', 'IMPORT', 'ROLLBACK', 'LOGIN_FAILED', 'ALERTA_SENSIBLE', 'API_REQUEST', 'PERMISO_CREATE', 'PERMISO_UPDATE', 'PERMISO_DELETE') NOT NULL,
     modulo VARCHAR(50) NOT NULL,
     entidad VARCHAR(100),
     registroId INT,
@@ -95,12 +95,21 @@ CREATE TABLE IF NOT EXISTS audit_log (
     ipAddress VARCHAR(45),
     userAgent VARCHAR(500),
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    duracionMs INT DEFAULT NULL,
     FOREIGN KEY (usuarioId) REFERENCES usuario(id) ON DELETE SET NULL,
     INDEX idx_modulo (modulo),
     INDEX idx_accion (accion),
     INDEX idx_usuarioId (usuarioId),
-    INDEX idx_createdAt (createdAt)
+    INDEX idx_createdAt (createdAt),
+    INDEX idx_entidad (entidad),
+    INDEX idx_registroId (registroId),
+    INDEX idx_entidad_registro (entidad, registroId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: audit_log_archive (para rotación de logs - HU-014)
+CREATE TABLE IF NOT EXISTS audit_log_archive LIKE audit_log;
+
+-- Tabla: notificaciones (para alertas de cambios sensibles - HU-019)
 
 -- Tabla: categorias
 CREATE TABLE IF NOT EXISTS categoria (
