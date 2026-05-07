@@ -30,7 +30,7 @@
         "yiisoft/translator": "^3.0",
         "yiisoft/validator": "^2.0",
         "yiisoft/yii-console": "^2.4",
-        "yiisoft/yii-view-renderer": "^2.0"
+        "yiisoft/yii-view-renderer": "^7.4"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5"
