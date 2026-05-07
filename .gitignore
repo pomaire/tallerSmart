@@ -3,23 +3,24 @@
 vendor/
 composer.lock
 
+# Logs and temp files
+*.log
+*.tmp
+
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# Logs
-*.log
-
-# IDE
+# Editors
 .vscode/
 .idea/
 
-# OS
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Cache
+# Yii framework specific
 runtime/
-yii
+web/assets/
 ```

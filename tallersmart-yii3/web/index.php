@@ -1,16 +1,20 @@
 <?php
 declare(strict_types=1);
 
-defined('YII_DEBUG') or define('YII_DEBUG', true);
-defined('YII_ENV') or define('YII_ENV', 'dev');
+use Yiisoft\Yii\Http\Application;
+use Yiisoft\Yii\Http\ServerRequestFactory;
 
-require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../vendor/yiisoft/yii2/Yii.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
-$config = require __DIR__ . '/../config/main.php';
+// Cargar contenedor de dependencias desde config
+$container = require __DIR__ . '/../config/bootstrap.php';
 
-$application = new yii\web\Application($config);
-$response = $application->handleRequest($application->getRequest());
-$response->send();
+// Crear la aplicación Yii3
+$application = $container->get(Application::class);
 
-$application->end();
+// Manejar la solicitud y enviar respuesta
+$request = $container->get(ServerRequestFactory::class)->createFromGlobals();
+$response = $application->handle($request);
+$response->emit();
+
+$application->shutdown();
