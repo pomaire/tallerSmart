@@ -1,11 +1,14 @@
 <?php
 
+$appUrl = getenv('APP_URL') ?: null;
+
 return [
     'id' => 'tallersmart-api',
     'name' => 'TallerSmart API',
     'language' => 'es',
     'sourceLanguage' => 'es',
     'basePath' => dirname(__DIR__),
+    'controllerNamespace' => 'app\\controllers\\web',
     'bootstrap' => ['log'],
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
@@ -51,6 +54,9 @@ return [
             'cookieValidationKey' => getenv('APP_KEY') ?: 'tallersmart-secret-key-change-in-production',
             'enableCsrfCookie' => true,
             'enableCsrfValidation' => true,
+            'hostInfo' => $appUrl,
+            'port' => 443,
+            'securePort' => 443,
         ],
         
         'urlManager' => [
@@ -129,7 +135,7 @@ return [
             'identityClass' => 'app\models\Usuario',
             'enableAutoLogin' => true,
             'enableSession' => true,
-            'loginUrl' => ['site/login'],
+            'loginUrl' => $appUrl ? rtrim($appUrl, '/') . '/site/login' : ['site/login'],
             'authTimeout' => 1800, // 30 minutos de inactividad (HU-004)
             'absoluteAuthTimeout' => 3600 * 24, // Sesión máxima de 24 horas
         ],

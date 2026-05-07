@@ -41,10 +41,10 @@ class SiteController extends BaseController
     public function actionIndex()
     {
         if (Yii::$app->user->isGuest) {
-            return $this->redirect(['site/login']);
+            return $this->redirect(Yii::$app->urlManager->createAbsoluteUrl(['site/login']));
         }
         
-        return $this->redirect(['dashboard/index']);
+        return $this->redirect(Yii::$app->urlManager->createAbsoluteUrl(['dashboard/index']));
     }
 
     /**
@@ -65,7 +65,7 @@ class SiteController extends BaseController
             return $this->goBack();
         }
 
-        return $this->render('site/login', [
+        return $this->render('login', [
             'model' => $model,
         ]);
     }
