@@ -13,7 +13,7 @@
         "yiisoft/active-record": "^1.0",
         "yiisoft/app": "dev-master",
         "yiisoft/cache-file": "^3.0",
-        "yiisoft/config": "^1.0",
+        "yiisoft/config": "^1.4",
         "yiisoft/db-migration": "^2.0",
         "yiisoft/db-mysql": "^2.0",
         "yiisoft/di": "^1.0",

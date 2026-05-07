@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Environment;
 use Yiisoft\Config\Config;
+use Yiisoft\Config\ConfigPaths;
 use Yiisoft\Definitions\Container;
 use Yiisoft\Definitions\Helpers\DynamicReference;
 
@@ -12,8 +13,7 @@ require_once __DIR__ . '/../src/bootstrap.php';
 
 // Build configuration
 $config = new Config(
-    sourcePath: __DIR__,
-    cachePath: dirname(__DIR__) . '/runtime/cache',
+    paths: new ConfigPaths(dirname(__DIR__)),
     environment: Environment::appEnv(),
 );
 
