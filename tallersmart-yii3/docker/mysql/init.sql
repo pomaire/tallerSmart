@@ -495,16 +495,7 @@ CREATE TABLE IF NOT EXISTS documento_tributario (
     INDEX idx_orden_servicio (orden_servicio_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Actualizar tabla pago para agregar campos faltantes
-ALTER TABLE pago 
-ADD COLUMN IF NOT EXISTS cliente_id INT AFTER ordenId,
-ADD COLUMN IF NOT EXISTS estado ENUM('pendiente', 'aprobado', 'rechazado', 'anulado', 'reembolsado') DEFAULT 'pendiente' AFTER metodoPago,
-ADD COLUMN IF NOT EXISTS referencia_tarjeta VARCHAR(100) AFTER referencia,
-ADD COLUMN IF NOT EXISTS folio VARCHAR(50) AFTER id,
-ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at,
-ADD FOREIGN KEY IF NOT EXISTS (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE;
-
 -- Índices para mejorar rendimiento en consultas de pagos
 CREATE INDEX IF NOT EXISTS idx_pago_estado ON pago(estado);
-CREATE INDEX IF NOT EXISTS idx_pago_metodo ON pago(metodo_pago);
-CREATE INDEX IF NOT EXISTS idx_pago_fecha ON pago(fecha_pago);
+CREATE INDEX IF NOT EXISTS idx_pago_metodo ON pago(metodoPago);
+CREATE INDEX IF NOT EXISTS idx_pago_createdAt ON pago(createdAt);

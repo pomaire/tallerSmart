@@ -35,7 +35,8 @@ RUN if [ -d "migrations" ] && [ "$(ls -A migrations/*.php 2>/dev/null)" ]; then 
     fi
 
 # Configurar permisos
-RUN chown -R www-data:www-data /var/www/html \
+RUN mkdir -p /var/www/html/runtime \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/runtime \
     && chmod -R 755 /var/www/html/web
 
